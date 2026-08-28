@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valåret-spelet</title>
+<style>
+:root{
+  --navy:#003366;
+  --navy-djup:#002244;
+  --länk:#0000CC;
+  --besökt:#551A8B;
+  --gul:#FFFFCC;
+  --panel:#EEEEEE;
+  --linje:#808080;
+  --linje-ljus:#C0C0C0;
+  --plus:#006600;
+  --minus:#CC0000;
+  --varning:#996600;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:#DDE3E9;
+  color:#000;
+  font-family:Verdana,Geneva,Arial,sans-serif;
+  font-size:12px;
+  line-height:1.45;
+}
+a{color:var(--länk);text-decoration:underline}
+a:visited{color:var(--besökt)}
+
+/* Topplist och myndighetshuvud */
+.huvud .inre,.smulor .inre,.fot .inre{
+  width:100%;max-width:760px;margin:0 auto;padding:0 12px}
+.huvud{background:var(--navy);color:#fff;padding:10px 0 9px;border-bottom:3px solid #FFCC00}
+.huvud h1{font-family:Georgia,"Times New Roman",Times,serif;
+  font-size:23px;font-weight:normal;margin:1px 0 0;letter-spacing:0}
+.smulor{background:var(--panel);border-bottom:1px solid var(--linje);font-size:11px}
+.smulor .inre{padding:4px 12px;color:#333;min-height:20px}
+.ark{width:100%;max-width:760px;margin:0 auto;padding:12px;
+  background:#fff;border-left:1px solid var(--linje);border-right:1px solid var(--linje)}
+
+/* Stegindikator som gammal tabellrad */
+.steg{list-style:none;display:flex;padding:0;margin:0 0 14px;
+  border:1px solid var(--linje);background:var(--panel);flex-wrap:wrap}
+.steg li{flex:1 1 0;min-width:92px;padding:5px 7px;font-size:11px;color:#444;
+  border-right:1px solid var(--linje-ljus)}
+.steg li:last-child{border-right:0}
+.steg li b{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#666}
+.steg li.nu{background:#fff;color:#000;font-weight:bold}
+.steg li.nu b{color:var(--navy)}
+
+h2{font-family:Georgia,"Times New Roman",Times,serif;
+  font-size:19px;font-weight:normal;margin:0 0 8px;line-height:1.25;color:var(--navy)}
+h3{font-size:12px;font-weight:bold;margin:0 0 6px}
+p{margin:0 0 11px}
+.etikett{font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  color:#555;font-weight:bold;margin:0 0 7px}
+.tal,.segTal,.postTal,.pris,.v,.baroTal,.kassaTal,.utfall span:nth-child(even){
+  font-family:"Courier New",Courier,monospace}
+
+/* Rutor */
+.kort{border:1px solid var(--linje);background:#fff;padding:13px;margin-bottom:13px}
+.info{border:1px solid var(--linje-ljus);border-left:5px solid var(--navy);
+  background:var(--gul);padding:8px 11px;margin:0 0 13px;font-size:11.5px}
+.info p:last-child{margin:0}
+
+.mål{display:block;font-size:11px;color:var(--navy);font-weight:bold;margin-top:3px}
+.målrad{border-bottom:1px solid var(--linje-ljus);padding:0 0 7px;margin-bottom:9px;
+  font-size:11.5px;color:#333}
+.målrad b{color:var(--navy)}
+
+/* Mätarpanel */
+.mätare{border:1px solid var(--linje);background:var(--panel);padding:11px 12px 9px;margin-bottom:13px}
+.segNamn{font-size:11px;margin-bottom:3px;display:flex;justify-content:space-between}
+.segNamn em{font-style:normal;font-family:"Courier New",Courier,monospace;font-size:11px;color:#444}
+.seg{margin-bottom:8px}
+.spår{height:13px;background:#fff;border:1px solid var(--linje);position:relative;display:block}
+.spår i{position:absolute;top:0;bottom:0;background:var(--navy)}
+.spår i.fara{background:var(--minus)}
+.spår .mitt{position:absolute;top:0;bottom:0;left:50%;width:1px;background:#666}
+.spår .grans{position:absolute;top:0;bottom:0;width:1px;background:var(--minus)}
+.rad2{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;
+  border-top:1px solid var(--linje-ljus);margin-top:10px;padding-top:9px}
+.baroTal,.kassaTal{font-size:22px;font-weight:bold;line-height:1.1;color:var(--navy)}
+.baroTal small,.kassaTal small{font-size:12px;font-weight:normal;color:#555}
+.kassa{text-align:right}
+.kassaTal.låg{color:var(--minus)}
+.kassaSpår{height:8px;background:#fff;border:1px solid var(--linje);width:130px;margin:4px 0 0 auto}
+.kassaSpår i{display:block;height:100%;background:var(--navy)}
+.kassaSpår i.låg{background:var(--minus)}
+.segTal{font-size:10.5px;color:#555}
+
+/* Alternativ som blankettrader */
+.alternativ{margin-top:10px;display:grid;gap:8px}
+button.alt{width:100%;text-align:left;background:#E4E4E4;
+  border:2px outset var(--linje-ljus);padding:10px 12px;cursor:pointer;
+  font-family:Verdana,Geneva,Arial,sans-serif;font-size:12px;color:#000;
+  display:grid;grid-template-columns:1fr auto;gap:0 12px;align-items:center}
+button.alt:hover{background:#EFEFEF}
+button.alt:active{border-style:inset;background:#DCDCDC}
+button.alt:focus-visible{outline:1px dotted #000;outline-offset:2px}
+.valTxt{font-size:12px;line-height:1.45;font-weight:bold}
+.pris{font-size:11px;color:#444;white-space:nowrap;padding-top:2px}
+.pris.in{color:var(--plus);font-weight:bold}
+
+/* Prioriteringar */
+.post{display:grid;grid-template-columns:1fr auto auto auto;gap:0 8px;align-items:center;
+  border-bottom:1px solid var(--linje-ljus);padding:8px 0}
+.postNamn b{display:block;font-size:11.5px}
+.postNamn span{font-size:10.5px;color:#555}
+.postTal{font-size:14px;font-weight:bold;min-width:24px;text-align:center}
+.stegKnapp{border:2px outset var(--linje-ljus);background:#E4E4E4;width:24px;height:22px;
+  font-family:"Courier New",Courier,monospace;font-size:14px;line-height:1;
+  cursor:pointer;color:#000;font-weight:bold;padding:0}
+.stegKnapp:active:not(:disabled){border-style:inset}
+.stegKnapp:disabled{color:#999;border-style:solid;border-color:var(--linje-ljus)}
+.pott{background:var(--panel);border:1px solid var(--linje);padding:7px 10px;margin:12px 0;
+  font-family:"Courier New",Courier,monospace;font-size:11.5px;
+  display:flex;justify-content:space-between;font-weight:bold}
+
+/* Följd */
+.följd{border:1px solid var(--linje-ljus);border-left:5px solid var(--navy);
+  background:var(--gul);padding:9px 11px;margin:0 0 13px}
+.följd p{margin:0}
+.utfall{display:grid;grid-template-columns:1fr auto;gap:0;font-size:11px;
+  border:1px solid var(--linje-ljus);border-bottom:0}
+.utfall span{padding:4px 7px;border-bottom:1px solid var(--linje-ljus)}
+.utfall span:nth-child(4n+1),.utfall span:nth-child(4n+2){background:var(--panel)}
+.utfall span:nth-child(even){text-align:right;font-weight:bold}
+.p{color:var(--plus)}.m{color:var(--minus)}
+.blind{font-size:11px;color:#555;font-style:italic;margin:0}
+.varning{border:1px solid var(--varning);border-left-width:5px;background:#FFF3D9;
+  padding:8px 11px;margin:11px 0 0;font-size:11.5px}
+.utgift{font-family:"Courier New",Courier,monospace;font-size:11px;color:#444;margin:11px 0 0;
+  border-top:1px solid var(--linje-ljus);padding-top:8px}
+
+/* Knappar — 3D-fasade */
+.knapp{background:#E4E4E4;color:#000;border:2px outset var(--linje-ljus);border-radius:0;
+  padding:5px 16px;font-family:Verdana,Geneva,Arial,sans-serif;font-size:12px;
+  font-weight:bold;cursor:pointer}
+.knapp:active:not(:disabled){border-style:inset}
+.knapp:disabled{color:#999;border-style:solid;border-color:var(--linje-ljus);background:#F0F0F0;cursor:not-allowed}
+.knapp:focus-visible{outline:1px dotted #000;outline-offset:2px}
+
+/* Listval */
+.parti{border-bottom:1px solid var(--linje-ljus);padding:10px 3px;cursor:pointer;display:block;
+  width:100%;text-align:left;background:#fff;border-left:0;border-right:0;border-top:0;
+  font-family:Verdana,Geneva,Arial,sans-serif;font-size:12px;color:#000}
+.parti:hover:not(:disabled){background:var(--gul)}
+.parti:disabled{color:#999;cursor:not-allowed;background:var(--panel)}
+.parti:focus-visible{outline:1px dotted #000;outline-offset:-3px}
+.parti b{display:block;font-size:12.5px}
+.parti span{font-size:11px;color:#555}
+
+/* Resultattabell */
+.rad{display:grid;grid-template-columns:1fr 58px 1fr;align-items:center;gap:10px;
+  padding:6px 7px;border-bottom:1px solid var(--linje-ljus);font-size:11.5px}
+.rad:nth-child(odd){background:var(--panel)}
+.rad .v{text-align:right;font-weight:bold;font-family:"Courier New",Courier,monospace}
+.stapel{height:11px;background:#fff;border:1px solid var(--linje)}
+.stapel i{display:block;height:100%;background:var(--navy)}
+.dom{border:2px solid var(--navy);background:var(--gul);padding:13px;margin:13px 0}
+.dom strong{font-family:Georgia,"Times New Roman",serif;font-size:18px;font-weight:normal;
+  display:block;margin-bottom:6px;color:var(--navy)}
+.slut{border:2px solid var(--minus);background:#FFF0F0;padding:13px;margin:13px 0}
+.slut strong{font-family:Georgia,"Times New Roman",serif;font-size:18px;font-weight:normal;
+  display:block;margin-bottom:6px;color:var(--minus)}
+
+/* Sidfot */
+.fot{background:var(--panel);border-top:1px solid var(--linje);
+  width:100%;max-width:760px;margin:0 auto;
+  border-left:1px solid var(--linje);border-right:1px solid var(--linje);
+  border-bottom:1px solid var(--linje)}
+.fot .inre{padding:9px 12px 16px;font-size:10.5px;color:#444}
+.fot dl{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;margin:0}
+.fot dt{font-weight:bold}
+.fot dd{margin:0;font-family:"Courier New",Courier,monospace}
+</style>
+</head>
+<body>
+<div class="huvud"><div class="inre">
+  <h1>Valåret-spelet</h1>
+</div></div>
+<div class="smulor"><div class="inre" id="smulor">&nbsp;</div></div>
+<div class="ark">
+  <div id="app"></div>
+</div>
+
+<div class="fot"><div class="inre">
+  <dl>
+    <dt>Senast uppdaterad</dt><dd id="uppdaterad">–</dd>
+  </dl>
+</div></div>
+
+<script>
+/* ==========================================================
+   VALÅRET
+   ========================================================== */
+
+const DRAGNINGAR   = 20;
+const LEAN_SKALA   = 2.4;
+const ÖVRE_GRÄNS   = 82;
+const UNDRE_GRÄNS  = 18;
+const MEDIECYKEL   = 0.04; // andel av avståndet till mitten som eroderar per kort
+const SEN_FAKTOR   = 1.8;  // kostnaderna stiger i sista tredjedelen
+const SEN_START    = Math.floor(DRAGNINGAR*2/3);
+const POTT         = 18;   // poäng att fördela i prioriteringarna
+const MAX_POST     = 6;
+const NEUTRAL_POST = 3;    // en post på 3 förskjuter ingenting
+const BUDGET_LEAN  = 2.0;  // hur hårt prioriteringarna slår på utgångsläget
+
+const SEGMENT = [
+  {id:"sto", namn:"Storstadsväljarna",   vikt:0.28},
+  {id:"lan", namn:"Landsbygdsväljarna",  vikt:0.26},
+  {id:"for", namn:"Förstagångsväljarna", vikt:0.18},
+  {id:"pen", namn:"Pensionärerna",       vikt:0.28},
+];
+
+const POSTER = [
+  {id:"valfard", namn:"Välfärd och omsorg",   rad:"Sjukvård, äldreomsorg, socialförsäkringar",
+   dragning:{sto:0.5, lan:0.6, for:-0.3, pen:1.2}},
+  {id:"skatt",   namn:"Skattelättnader",      rad:"Sänkt skatt på arbete och företagande",
+   dragning:{sto:1.0, lan:0.7, for:0.5, pen:-1.1}},
+  {id:"trygg",   namn:"Trygghet och rättsväsende", rad:"Polis, domstolar, kriminalvård",
+   dragning:{sto:-0.4, lan:1.1, for:-0.8, pen:1.0}},
+  {id:"klimat",  namn:"Klimat och miljö",     rad:"Styrmedel, omställning, naturvård",
+   dragning:{sto:1.1, lan:-1.2, for:1.2, pen:-0.5}},
+  {id:"skola",   namn:"Skola och utbildning", rad:"Grundskola, gymnasium, högskola",
+   dragning:{sto:0.6, lan:0.4, for:1.2, pen:-0.4}},
+  {id:"lands",   namn:"Landsbygd och infrastruktur", rad:"Vägar, kommunstöd, regional utveckling",
+   dragning:{sto:-1.0, lan:1.4, for:-0.4, pen:0.4}},
+];
+
+const PARTIER = [
+  { id:"reg", namn:"Regeringspartiet", rad:"Sitter vid makten. Har ett facit att försvara.",
+    bas:28.0, kassa:46, styre:52, mal:"Vara största parti", provaMal:s=>s.total>=26 },
+  { id:"utm", namn:"Utmanaren", rad:"Största oppositionsparti. Behöver inte leverera.",
+    bas:24.5, kassa:40, styre:50, mal:"Vara största parti", provaMal:s=>s.total>=26 },
+  { id:"vag", namn:"Vågmästaren", rad:"Litet. Avgör vem som styr.",
+    bas:5.4, kassa:32, styre:50, mal:"Klara spärren och vara koalitionsduglig",
+    provaMal:s=>s.total>=4 && s.kons>=50 },
+  { id:"nyk", namn:"Nykomlingen", rad:"Nystartat. Inget att förlora.",
+    bas:3.4, kassa:29, styre:50, mal:"Ta sig in i riksdagen", provaMal:s=>s.total>=4 },
+  { id:"enf", namn:"Enfrågepartiet", rad:"En fråga. En lojal skara.",
+    bas:6.6, kassa:34, styre:50, mal:"Få in frågan i överenskommelsen",
+    provaMal:s=>s.total>=4 && s.kons>=70 },
+  { id:"gam", namn:"Det gamla partiet", rad:"Störst organisation. Krympande väljarbas.",
+    bas:14.2, kassa:54, styre:54, mal:"Tappa mindre än 2 procentenheter",
+    provaMal:s=>s.total>=s.start-2 },
+];
+
+const INVESTERINGAR = [
+  {id:"org",    namn:"Lokalorganisation",  pris:8, lean:{lan:5, pen:3, sto:-1, for:-2},
+   rad:"Drar alla fyra grupper mot mitten varje kort. Verkar först efter en tredjedel."},
+  {id:"stab",   namn:"Kommunikationsstab", pris:7, lean:{sto:2, for:1},
+   rad:"Du ser siffrorna på staplarna istället för bara pilar."},
+  {id:"analys", namn:"Analysavdelning",    pris:6, lean:{},
+   rad:"Halverar felmarginalen i barometern."},
+  {id:"annons", namn:"Annonsköp",          pris:6, lean:{sto:3, for:4, lan:1, pen:-1},
+   rad:"Lyfter alla fyra grupper. Klingar av över körningen."},
+  {id:"press",  namn:"Pressekreterare",    pris:5, lean:{sto:2, pen:1},
+   rad:"Dämpar konsekvensförluster med 40 procent."},
+  {id:"varva",  namn:"Medlemsvärvning",    pris:4, lean:{pen:4, lan:2, for:-1},
+   rad:"Ger 0,5 mkr tillbaka varje kort."},
+  {id:"ekonom", namn:"Ekonomichef",        pris:5, lean:{},
+   rad:"Sänker alla utgifter med 20 procent."},
+];
+
+/* Kort. tema + linje kopplar valet till prioriteringarna.
+   linje: 1 = satsar på temat, -1 = prioriterar ner det.  */
+
+const GRUNDDÄCK = [
+  { etikett:"Vårändringsbudgeten", fast:"start",
+    txt:"Vårändringsbudgeten är valårets sista tillfälle att lägga pengar på bordet. Du får driva en post.",
+    a:{txt:"Driv på för välfärdens kärna", tema:"valfard", linje:1, kost:2,
+       eff:{sto:0.4,lan:-0.2,for:-0.4,pen:1.2}, styre:6, kons:0,
+       följd:"Posten prissattes till nio miljarder. Effekten skulle synas om tre till fem år."},
+    b:{txt:"Driv på för sänkt skatt på arbete", tema:"skatt", linje:1, kost:2,
+       eff:{sto:1.3,lan:0.9,for:0.6,pen:-2.0}, styre:-2, kons:0,
+       följd:"Sänkningen skulle slå igenom i januari. Pensionärerna omfattas inte."} },
+
+  { etikett:"Slutdebatt", fast:"slut",
+    txt:"Sista framträdandet före valdagen. De flesta har redan bestämt sig.",
+    a:{txt:"Upprepa huvudbudskapet", kost:1, eff:{sto:0.2,lan:0.2,for:-0.3,pen:0.4}, styre:0, kons:7,
+       följd:"Ingenting nytt sades. Ingenting gick fel."},
+    b:{txt:"Ge ett nytt löfte", kost:4, eff:{sto:0.3,lan:0.5,for:0.7,pen:-0.1}, styre:-4, kons:-12,
+       följd:"Löftet var inte förankrat i budgeten. Det noterades på måndagen."} },
+
+  { etikett:"Händelse",
+    txt:"En myndighet har överskridit sin budget med 1,2 miljarder. Du får frågan inom en timme.",
+    a:{txt:"Kräv generaldirektörens avgång", kost:3, eff:{sto:-0.3,lan:0.9,pen:0.3}, styre:-5, kons:-6,
+       följd:"En anvisning till en myndighet vore ministerstyre och är förbjudet. Påpekandet kom på onsdagen. Kravet upprepades på torsdagen."},
+    b:{txt:"Begär att frågan utreds", kost:1, eff:{sto:0.5,lan:-0.5,for:-0.6,pen:0.6}, styre:4, kons:2,
+       följd:"En utredning skulle redovisas i november. Valet är i september."} },
+
+  { etikett:"Debattprogram",
+    txt:"Direktsänd partiledardebatt. Fyrtio minuter, varav tjugo sekunder sprids.",
+    a:{txt:"Avbryt ofta, håll hög ton", kost:1, eff:{sto:-1.8,lan:2.1,for:1.6,pen:-1.9}, styre:0, kons:-3,
+       följd:"Klippet som spreds var när du suckade. Det såg sämre ut än det lät."},
+    b:{txt:"Låt motståndaren tala, bemöt sakligt", kost:2, eff:{sto:1.2,lan:-0.9,for:-1.6,pen:1.4}, styre:0, kons:6,
+       följd:"Sakligheten uppmärksammades i en ledarartikel. Klippet spreds inte."} },
+
+  { etikett:"Läcka",
+    txt:"Ett internt mejl har läckt. Innehållet är inte olagligt, bara pinsamt.",
+    a:{txt:"Bekräfta och beklaga", kost:1, eff:{sto:0.9,lan:-1.2,for:0.5,pen:0.3}, styre:2, kons:4,
+       följd:"Historien var död på fredagen."},
+    b:{txt:"Ifrågasätt äktheten", kost:5, eff:{sto:-1.9,lan:1.7,for:0.7,pen:-0.8}, styre:-3, kons:-9,
+       följd:"Kriskommunikationen fakturerades per timme. Äktheten bekräftades på onsdagen."} },
+
+  { etikett:"Valaffisch",
+    txt:"Affischen ska tryckas. Motivet sitter uppe till valdagen.",
+    a:{txt:"Porträtt och partinamn", kost:4, eff:{lan:0.2,for:-1.3,pen:1.4}, styre:0, kons:2,
+       följd:"Igenkänningen ökade. Ingen kunde återge vad du vill."},
+    b:{txt:"Ett konkret löfte i stor text", kost:5, eff:{sto:0.3,lan:0.5,for:0.4,pen:-0.1}, styre:0, kons:-4,
+       följd:"Löftet citerades i varje intervju därefter.", öppnar:"loftet"} },
+
+  { etikett:"Uppföljning", id:"loftet", dolt:true,
+    txt:"En journalist har räknat på ditt affischlöfte. Det saknas fyra miljarder.",
+    a:{txt:"Stå fast vid siffran", kost:1, eff:{sto:-1.4,lan:1.1,for:0.9,pen:-1.0}, styre:-4, kons:-8,
+       följd:"Två oberoende ekonomer räknade om. Båda höll med journalisten."},
+    b:{txt:"Justera löftet", kost:3, eff:{sto:1.1,lan:-1.0,for:-1.4,pen:0.9}, styre:3, kons:-11,
+       följd:"Justeringen beskrevs som ett förtydligande. Den beskrevs så av dig."} },
+
+  { etikett:"Underhållningsprogram",
+    txt:"Du är inbjuden till ett program där du ska baka. Politik får inte diskuteras.",
+    a:{txt:"Tacka ja och spela med", kost:2, eff:{sto:-0.3,lan:0.1,for:1.3}, styre:0, kons:-4,
+       följd:"Du var folklig i 43 minuter. Ledarsidorna kallade det ett lågvattenmärke."},
+    b:{txt:"Tacka nej", kost:1, eff:{sto:1.0,lan:-0.6,for:-1.6,pen:0.9}, styre:1, kons:5,
+       följd:"Platsen gick till en konkurrent. Avsnittet fick höga tittarsiffror."} },
+
+  { etikett:"Inlägg på X",
+    txt:"Ett klipp på dig sprids med vilseledande text. 40 000 visningar och stigande.",
+    a:{txt:"Svara direkt i tråden", kost:1, eff:{sto:-1.1,lan:0.9,for:1.5,pen:-1.0}, styre:0, kons:-2,
+       följd:"Svaret fick fler visningar än klippet. Så gjorde även citaten av svaret."},
+    b:{txt:"Köp bemötandeannonser", kost:4, eff:{sto:0.7,lan:-0.4,for:0.2,pen:0.4}, styre:0, kons:1,
+       följd:"Annonserna nådde 900 000 personer, varav de flesta inte sett klippet."} },
+
+  { etikett:"Intern kritik",
+    txt:"Tre distriktsordförande har uttalat sig anonymt om ditt ledarskap.",
+    a:{txt:"Kalla till möte och lyssna", kost:2, eff:{lan:0.9,for:-0.9,pen:0.3}, styre:3, kons:4,
+       följd:"Mötet läckte. Innehållet i läckan var att mötet varit konstruktivt."},
+    b:{txt:"Markera offentligt", kost:1, eff:{sto:0.9,lan:-1.7,for:1.2,pen:-0.6}, styre:-2, kons:-3,
+       följd:"Två av tre stannade. Den tredje skrev en debattartikel."} },
+
+  /* ---------- Intäktskort ---------- */
+
+  { etikett:"Donation",
+    txt:"En intresseorganisation erbjuder tolv miljoner till valrörelsen.",
+    a:{txt:"Ta emot", kost:-12, eff:{}, styre:0, kons:-5,
+       följd:"Bidraget redovisas enligt reglerna, längst ner på en sida ingen läser.", öppnar:"gentjanst"},
+    b:{txt:"Tacka nej", kost:1, eff:{sto:0.2,lan:-0.3,for:0.5}, styre:1, kons:6,
+       följd:"Nejet nämndes i en notis. Pengarna gick till någon annan."} },
+
+  { etikett:"Uppföljning", id:"gentjanst", dolt:true,
+    txt:"Organisationen som finansierade dig vill se ett undantag i den nya regleringen.",
+    a:{txt:"Skriv in undantaget", kost:-6, eff:{sto:-1.2,lan:1.3,for:-0.7}, styre:-7, kons:-10,
+       följd:"Undantaget är tekniskt och står i en bilaga. En reporter hittade det ändå."},
+    b:{txt:"Neka", kost:2, eff:{sto:0.5,lan:-0.2,for:0.3,pen:0.2}, styre:5, kons:8,
+       följd:"Finansieringen upphörde. Det gjorde även inbjudningarna."} },
+
+  { etikett:"Insamling",
+    txt:"Kassören föreslår ett insamlingsupprop till medlemmarna.",
+    a:{txt:"Gör utskicket", kost:-9, eff:{sto:-0.2,lan:-0.1,for:-0.6,pen:0.6}, styre:0, kons:-2,
+       följd:"Uppropet gav nio miljoner och 340 avanmälningar från utskickslistan."},
+    b:{txt:"Avstå", kost:1, eff:{lan:0.1,pen:0.1}, styre:0, kons:3,
+       följd:"Kassören noterade beslutet i protokollet."} },
+
+  { etikett:"Partifastigheten",
+    txt:"Partiets kongresslokal är värd fjorton miljoner. Den används fyra dagar om året.",
+    a:{txt:"Sälj den", tema:"lands", linje:-1, kost:-14,
+       eff:{sto:1.1,lan:-1.8,for:1.2,pen:-1.1}, styre:0, kons:-4,
+       följd:"Distrikten fick veta det via fastighetsannonsen."},
+    b:{txt:"Behåll den", tema:"lands", linje:1, kost:1,
+       eff:{sto:-0.6,lan:1.0,for:-0.7,pen:0.7}, styre:0, kons:4,
+       följd:"Lokalen står kvar. Driftskostnaden gör det också."} },
+
+  { etikett:"Medlemsavgiften",
+    txt:"Avgiften har varit oförändrad i elva år.",
+    a:{txt:"Höj den", kost:-7, eff:{sto:-0.2,lan:-0.5,pen:-0.3}, styre:0, kons:-1,
+       följd:"Sju procent av medlemmarna betalade inte in nästa år."},
+    b:{txt:"Låt den ligga", kost:1, eff:{lan:0.2,for:-0.1,pen:0.1}, styre:0, kons:2,
+       följd:"Beslutet fattades utan diskussion."} },
+
+  { etikett:"Uppdraget",
+    txt:"En branschorganisation vill betala dig för ett föredrag om ledarskap.",
+    a:{txt:"Håll föredraget", kost:-5, eff:{sto:-0.5,for:-0.8,pen:0.4}, styre:0, kons:-7,
+       följd:"Arvodet redovisades korrekt och citerades i tre år."},
+    b:{txt:"Tacka nej", kost:1, eff:{sto:0.1,for:0.4,pen:-0.1}, styre:0, kons:5,
+       följd:"Föredraget hölls av en riksdagsledamot från ett annat parti."} },
+
+  { etikett:"Kampanjsamarbete",
+    txt:"En känd profil erbjuder sig att synas i er kampanj mot ersättning från en tredje part.",
+    a:{txt:"Tacka ja", kost:-8, eff:{sto:0.6,lan:-1.2,for:2.8,pen:-2.3}, styre:0, kons:-6,
+       följd:"Räckvidden blev stor. Frågan om vem som betalade blev större."},
+    b:{txt:"Tacka nej", kost:1, eff:{sto:0.2,lan:0.6,for:-1.3,pen:0.8}, styre:0, kons:4,
+       följd:"Profilen syntes i en konkurrents kampanj nio dagar senare."} },
+
+  /* ---------- Sakfrågor kopplade till prioriteringarna ---------- */
+
+  { etikett:"Sjukvård",
+    txt:"Väntetiderna har ökat för tredje kvartalet i rad.",
+    a:{txt:"Lova en vårdgaranti med tidsgräns", tema:"valfard", linje:1, kost:3,
+       eff:{sto:0.1,lan:0.5,for:-0.5,pen:1.1}, styre:-3, kons:-4,
+       följd:"Garantin fick ett datum. Datumet ligger efter nästa val."},
+    b:{txt:"Presentera statistiken i sitt sammanhang", tema:"valfard", linje:-1, kost:1,
+       eff:{sto:1.5,lan:-0.6,for:-0.3,pen:-1.0}, styre:5, kons:3,
+       följd:"Sammanhanget var korrekt och intresserade ingen."} },
+
+  { etikett:"Skolfråga",
+    txt:"En granskning visar stora skillnader i betygssättning mellan skolor.",
+    a:{txt:"Driv kravet på centralt rättade prov", tema:"skola", linje:1, kost:1,
+       eff:{sto:1.2,lan:0.4,for:-1.8,pen:0.9}, styre:6, kons:1,
+       följd:"Frågan skulle behöva utredas. Införande tidigast om fyra år."},
+    b:{txt:"Hänvisa till huvudmännens ansvar", tema:"skola", linje:-1, kost:1,
+       eff:{sto:-0.2,lan:0.1,for:-0.4,pen:-0.1}, styre:-2, kons:2,
+       följd:"Ansvarsfördelningen är korrekt beskriven i skollagen."} },
+
+  { etikett:"Klimatbeslut",
+    txt:"Ett styrmedel ger stor effekt om tio år och kostar hushållen pengar nu.",
+    a:{txt:"Ställ dig bakom styrmedlet", tema:"klimat", linje:1, kost:2,
+       eff:{sto:2.1,lan:-2.4,for:1.6,pen:-1.3}, styre:8, kons:1,
+       följd:"Effekten går inte att mäta inom mandatperioden. Kostnaden syns i mars."},
+    b:{txt:"Motsätt dig införandet", tema:"klimat", linje:-1, kost:1,
+       eff:{sto:-1.7,lan:2.2,for:-1.4,pen:1.1}, styre:-6, kons:1,
+       följd:"Motståndet motiverades med behov av ytterligare beredning."} },
+
+  { etikett:"Brottsstatistik",
+    txt:"Anmälningarna har ökat i tre kommuner. Uppklarningen är oförändrad.",
+    a:{txt:"Lova fler poliser", tema:"trygg", linje:1, kost:3,
+       eff:{sto:-0.5,lan:1.1,for:-0.7,pen:1.0}, styre:2, kons:1,
+       följd:"Polisutbildningen tar två och ett halvt år. Löftet gäller mandatperioden."},
+    b:{txt:"Peka på att anmälningsbenägenheten ökat", tema:"trygg", linje:-1, kost:1,
+       eff:{sto:1.8,lan:-1.6,for:0.3,pen:-1.3}, styre:3, kons:2,
+       följd:"Påpekandet var statistiskt korrekt och blev veckans mest hånade uttalande."} },
+
+  { etikett:"Skattefråga",
+    txt:"En utredning föreslår att ett avdrag avskaffas. Det ger fyra miljarder.",
+    a:{txt:"Försvara avdraget", tema:"skatt", linje:1, kost:1,
+       eff:{sto:0.6,lan:0.3,for:-0.2}, styre:-4, kons:1,
+       följd:"Utredningen kostade elva miljoner. Avdraget diskuterades inte vidare."},
+    b:{txt:"Ställ dig bakom avskaffandet", tema:"skatt", linje:-1, kost:1,
+       eff:{sto:-0.4,lan:-0.6,for:0.2,pen:-0.3}, styre:6, kons:1,
+       följd:"De fyra miljarderna beskrevs som utrymme för annat. Ingen frågade vad."} },
+
+  { etikett:"Kommunkris",
+    txt:"En kommun kan inte betala ut löner nästa månad.",
+    a:{txt:"Kräv statligt stöd till kommunen", tema:"lands", linje:1, kost:2,
+       eff:{sto:-0.4,lan:1.4,for:-0.5,pen:0.3}, styre:2, kons:1,
+       följd:"Fjorton kommuner hörde av sig med samma begäran inom en vecka."},
+    b:{txt:"Hänvisa till det kommunala självstyret", tema:"lands", linje:-1, kost:1,
+       eff:{sto:1.6,lan:-2.0,pen:-0.3}, styre:1, kons:2,
+       följd:"Formellt korrekt. Lönerna betalades inte ut."} },
+
+  { etikett:"Opinionsmätning",
+    txt:"Tre institut publicerar samma vecka. Ett visar uppgång, två visar nedgång.",
+    a:{txt:"Kommentera den som visar uppgång", kost:1, eff:{sto:-1.2,lan:0.8,for:0.6,pen:-0.4}, styre:0, kons:-6,
+       följd:"Institutets metodbeskrivning blev veckans mest lästa artikel."},
+    b:{txt:"Beställ en egen mätning", kost:4, eff:{sto:0.2,lan:-0.1,pen:0.1}, styre:0, kons:2,
+       följd:"Den egna mätningen visade ungefär samma sak som de två du inte gillade."} },
+
+  { etikett:"Utspel",
+    txt:"Din pressekreterare har ett färdigt utspel som garanterat får genomslag i tre dagar.",
+    a:{txt:"Kör det", kost:3, eff:{sto:-0.3,lan:1.0,for:0.6,pen:-0.4}, styre:-2, kons:-5,
+       följd:"Genomslaget blev fyra dagar. Frågan fanns inte i något av dina underlag."},
+    b:{txt:"Lägg det i byrålådan", kost:1, eff:{sto:0.5,lan:-0.7,for:-0.6,pen:0.7}, styre:2, kons:4,
+       följd:"Ett annat parti gjorde samma utspel elva dagar senare."} },
+
+  { etikett:"Utfrågning",
+    txt:"En reporter frågar vad ditt förslag kostar. Du har siffran ungefär i huvudet.",
+    a:{txt:"Ange en siffra", kost:1, eff:{sto:0.7,lan:0.3,pen:0.1}, styre:0, kons:-6,
+       följd:"Siffran var fel med 30 procent. Den citerades i sex månader."},
+    b:{txt:"Säg att du återkommer", kost:1, eff:{sto:-0.5,lan:-0.1,for:-0.7,pen:0.4}, styre:0, kons:4,
+       följd:"Klippet på när du inte svarade blev intervjuns mest spridda del."} },
+
+  { etikett:"Koalitionsfråga",
+    txt:"Journalisterna vill veta vilka du kan tänka dig att samarbeta med.",
+    a:{txt:"Ge tydligt besked", kost:1, eff:{sto:0.1,lan:0.2,for:0.6}, styre:0, kons:8,
+       följd:"Beskedet låste dig. Det noterades av alla du inte nämnde."},
+    b:{txt:"Håll dörrarna öppna", kost:1, eff:{sto:-0.2,lan:-0.3,for:-0.7,pen:0.9}, styre:0, kons:-5,
+       följd:"Frågan ställdes på nytt vid varje framträdande fram till valdagen."} },
+
+  { etikett:"Turné",
+    txt:"Tre veckor kvar. Det finns utrymme för en sista satsning.",
+    a:{txt:"Torgmöten i mindre orter", tema:"lands", linje:1, kost:6,
+       eff:{sto:-1.3,lan:2.0,for:-0.5,pen:0.6}, styre:0, kons:1,
+       följd:"Sammanlagt 2 100 personer kom. Lokaltidningarna skrev om samtliga besök."},
+    b:{txt:"Digital annonsering", kost:8, eff:{sto:0.7,lan:-0.4,for:1.8,pen:-1.4}, styre:0, kons:0,
+       följd:"Räckvidden var 1,8 miljoner. Genomsnittlig visningstid 1,4 sekunder."} },
+];
+
+const PARTIKORT = {
+  reg:[
+    { etikett:"Regeringsfråga",
+      txt:"En reform du sjösatte för tre år sedan har utvärderats. Resultatet är blandat.",
+      a:{txt:"Lyft de delar som fungerade", kost:2, eff:{sto:0.3,for:-0.4,pen:0.5}, styre:0, kons:-4,
+         följd:"Utvärderingens sammanfattning lästes upp av oppositionen i sin helhet."},
+      b:{txt:"Erkänn att den behöver göras om", kost:1, eff:{sto:1.1,lan:-0.1,for:0.7,pen:-1.4}, styre:6, kons:-7,
+         följd:"Ärligheten uppskattades av ledarsidorna och av ingen annan."} },
+    { etikett:"Regeringsfråga",
+      txt:"Ett departement har inte verkställt ett riksdagsbeslut. Det har gått fjorton månader.",
+      a:{txt:"Ta ansvaret själv", kost:1, eff:{sto:0.4,lan:-0.2,for:0.1,pen:0.2}, styre:4, kons:6,
+         följd:"Ansvarstagandet blev rubriken. Det gjorde även förseningen."},
+      b:{txt:"Peka på handläggningen", kost:1, eff:{sto:-1.0,lan:1.1,for:-0.5,pen:-0.1}, styre:-3, kons:-6,
+         följd:"Tre tjänstemän begärde att få uttala sig. Två fick det."} },
+  ],
+  utm:[
+    { etikett:"Oppositionsfråga",
+      txt:"Du kritiserar regeringens förslag. Reportern frågar vad du hade gjort istället.",
+      a:{txt:"Presentera ett eget förslag", kost:4, eff:{sto:0.7,lan:0.1,for:0.4,pen:-0.2}, styre:3, kons:-5,
+         följd:"Förslaget granskades med samma måttstock som regeringens. Det höll inte lika bra."},
+      b:{txt:"Håll dig till kritiken", kost:1, eff:{sto:-1.2,lan:1.2,for:0.8,pen:-0.8}, styre:0, kons:2,
+         följd:"Kritiken var träffsäker. Frågan ställdes igen nästa vecka."} },
+    { etikett:"Oppositionsfråga",
+      txt:"Regeringen lägger ett förslag du själv drev för två år sedan.",
+      a:{txt:"Stöd det", kost:1, eff:{sto:0.5,lan:-0.2,for:-0.3,pen:0.6}, styre:6, kons:9,
+         följd:"Stödet noterades knappt. Förslaget blev regeringens."},
+      b:{txt:"Hitta invändningar", kost:2, eff:{sto:-1.7,lan:1.7,for:1.2,pen:-1.1}, styre:-4, kons:-11,
+         följd:"Din egen motion från 2024 lästes upp i kammaren."} },
+  ],
+  vag:[
+    { etikett:"Vågmästarfråga",
+      txt:"Ett stort parti erbjuder dig ett utskottsordförandeskap mot att du släpper en fråga.",
+      a:{txt:"Acceptera", kost:-4, eff:{sto:0.5,lan:0.4,for:-1.5,pen:0.7}, styre:3, kons:-12,
+         följd:"Posten var reell och gav kansliresurser. Frågan var er enda igenkänning."},
+      b:{txt:"Neka", kost:1, eff:{sto:-0.2,lan:0.1,for:1.3,pen:-0.6}, styre:-2, kons:9,
+         följd:"Nejet stärkte profilen. Inflytandet gick till någon annan."} },
+    { etikett:"Vågmästarfråga",
+      txt:"Frågan om spärren dominerar all rapportering om er.",
+      a:{txt:"Kampanja om stödröster", kost:5, eff:{sto:0.7,lan:0.2,for:0.4}, styre:0, kons:-8,
+         följd:"Kampanjen fungerade. Den blev också er enda kvarvarande fråga."},
+      b:{txt:"Vägra prata om spärren", kost:1, eff:{sto:-0.5,lan:-0.2,for:0.8,pen:-0.7}, styre:0, kons:7,
+         följd:"Alla andra pratade om den istället."} },
+  ],
+  nyk:[
+    { etikett:"Nykomlingsfråga",
+      txt:"En av dina toppkandidater har svarat fel på en fråga om er egen politik.",
+      a:{txt:"Stå bakom kandidaten", kost:1, eff:{sto:-1.2,lan:0.9,for:1.0,pen:-0.9}, styre:0, kons:5,
+         följd:"Klippet visades 41 gånger under valrörelsen."},
+      b:{txt:"Flytta ner kandidaten på listan", kost:2, eff:{sto:1.1,lan:-0.9,for:-1.2,pen:0.9}, styre:2, kons:-6,
+         följd:"Kandidaten startade ett eget parti i november."} },
+    { etikett:"Nykomlingsfråga",
+      txt:"Ni har fått mer medieutrymme på två veckor än under hela året innan.",
+      a:{txt:"Fyll det med sakpolitik", kost:3, eff:{sto:1.0,lan:-0.1,for:-0.2,pen:0.3}, styre:5, kons:8,
+         följd:"Utrymmet krympte till normal nivå inom tio dagar."},
+      b:{txt:"Fyll det med konflikt", kost:1, eff:{sto:-1.9,lan:1.8,for:2.0,pen:-1.7}, styre:-3, kons:-7,
+         följd:"Utrymmet växte. Ingen kunde uppge vad ni vill."} },
+  ],
+  enf:[
+    { etikett:"Enfrågeproblem",
+      txt:"Regeringen har genomfört en stor del av din fråga.",
+      a:{txt:"Ta åt dig äran", kost:1, eff:{sto:0.2,lan:0.1,for:-0.1,pen:0.4}, styre:4, kons:6,
+         följd:"Äran delades av fyra partier. Ert existensberättigande krympte."},
+      b:{txt:"Säg att det inte räcker", kost:1, eff:{sto:-1.2,lan:0.8,for:1.2,pen:-0.9}, styre:0, kons:-4,
+         följd:"Kravet skärptes. Det var fjärde skärpningen på två år."} },
+    { etikett:"Enfrågeproblem",
+      txt:"Du får en fråga om ett område ni aldrig har haft en position i.",
+      a:{txt:"Improvisera ett svar", kost:1, eff:{sto:0.2,lan:0.4,for:0.1,pen:-0.1}, styre:-2, kons:-9,
+         följd:"Svaret blev partiets officiella linje samma eftermiddag."},
+      b:{txt:"Säg att ni bara driver en fråga", kost:1, eff:{sto:-0.1,lan:-0.7,for:1.1,pen:-0.9}, styre:0, kons:10,
+         följd:"Tydligheten var oantastlig och gjorde er omöjliga att förhandla med."} },
+  ],
+  gam:[
+    { etikett:"Arvsfråga",
+      txt:"En tidigare partiledare vill uttala sig i valrörelsen.",
+      a:{txt:"Ge plats", kost:1, eff:{sto:-0.2,lan:0.9,for:-2.4,pen:2.1}, styre:0, kons:4,
+         följd:"Framträdandet var omtyckt av dem som mindes företrädaren."},
+      b:{txt:"Tacka nej", kost:1, eff:{sto:1.1,lan:-1.1,for:1.9,pen:-1.9}, styre:0, kons:-3,
+         följd:"Företrädaren gav en intervju till Morgontidningen istället."} },
+    { etikett:"Arvsfråga",
+      txt:"Medelåldern bland era medlemmar har passerat 63 år.",
+      a:{txt:"Satsa på förnyelse", kost:6, eff:{sto:1.4,lan:-1.1,for:2.6,pen:-2.9}, styre:2, kons:-6,
+         följd:"Förnyelsen tog fart. Det gjorde även avhoppen."},
+      b:{txt:"Vårda kärnväljarna", kost:1, eff:{sto:-1.3,lan:1.0,for:-2.4,pen:2.7}, styre:0, kons:5,
+         följd:"Kärnväljarna stannade. Beräknad storlek om åtta år: hälften."} },
+  ],
+};
+
+/* ==========================================================
+   LOGIK
+   ========================================================== */
+
+let S=null;
+const app=document.getElementById("app");
+const smulor=document.getElementById("smulor");
+
+const STEG=["Parti","Prioriteringar","Investeringar","Valåret"];
+function stegHTML(nu){
+  return `<ol class="steg">`+STEG.map((t,i)=>
+    `<li class="${i+1===nu?'nu':(i+1<nu?'klar':'')}"><b>Steg ${i+1} av 4</b>${t}</li>`
+  ).join("")+`</ol>`;
+}
+function sidhuvud(nu, sida){
+  smulor.textContent = (S && S.parti ? S.parti.namn + " · " : "") + sida;
+  return stegHTML(nu);
+}
+
+const faktor = l => 0.4 + l*0.012;
+const stödI  = id => S.parti.bas * faktor(S.lean[id]);
+const total  = () => SEGMENT.reduce((a,s)=>a + stödI(s.id)*s.vikt, 0);
+const senT   = () => S.drag >= SEN_START;
+/* Faktisk kostnad för ett val. Intäkter påverkas inte av kampanjpris eller ekonomichef. */
+function kostnad(v){
+  const k=v.kost||0;
+  if(k<=0) return k;
+  let x=k*(senT()?SEN_FAKTOR:1);
+  if(S.inv.includes("ekonom")) x*=0.8;
+  return Math.round(x*10)/10;
+}
+const klamp  = v => Math.max(0, Math.min(100, v));
+
+/* Utgångsläge = 50 förskjutet av prioriteringar och investeringar */
+function startLean(){
+  const l={sto:50,lan:50,for:50,pen:50};
+  POSTER.forEach(p=>{
+    const avvik=(S.budget[p.id]-NEUTRAL_POST);
+    SEGMENT.forEach(s => l[s.id] += avvik*(p.dragning[s.id]||0)*BUDGET_LEAN);
+  });
+  INVESTERINGAR.filter(i=>S.inv.includes(i.id)).forEach(i=>{
+    SEGMENT.forEach(s => l[s.id] += (i.lean[s.id]||0));
+  });
+  SEGMENT.forEach(s => l[s.id]=Math.max(0,Math.min(100,l[s.id])));
+  return l;
+}
+
+function brus(sigma){
+  let u=0,v=0;
+  while(!u) u=Math.random();
+  while(!v) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*sigma;
+}
+function blanda(a){
+  const x=a.slice();
+  for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}
+  return x;
+}
+function byggLek(parti){
+  const start=GRUNDDÄCK.filter(k=>k.fast==="start");
+  const slut =GRUNDDÄCK.filter(k=>k.fast==="slut");
+  const fritt=GRUNDDÄCK.filter(k=>!k.fast && !k.dolt);
+  const egna =PARTIKORT[parti.id]||[];
+  return start.concat(blanda(fritt.concat(egna)).slice(0, DRAGNINGAR-start.length-slut.length), slut);
+}
+
+function nyttSpel(parti){
+  const budget={}; POSTER.forEach(p=>budget[p.id]=3);
+  S={parti, budget, lean:{sto:50,lan:50,for:50,pen:50},
+     kassa:parti.kassa, maxKassa:parti.kassa, styre:parti.styre, kons:100,
+     inv:[], drag:0, sigma:0.85, lek:byggLek(parti), låsta:[],
+     varningar:[], senasteUtgift:null, senasteLinje:null, konkurs:false, start:parti.bas};
+}
+function mätning(){ S.visat = total() + brus(S.sigma); }
+
+/* Prioriteringarnas dom över ett val */
+function linjedom(v){
+  if(!v.tema) return null;
+  const prio=S.budget[v.tema];
+  const post=POSTER.find(p=>p.id===v.tema);
+  const namn=post.namn.toLowerCase();
+  const avvikelse=(prio-NEUTRAL_POST)*v.linje;
+  if(avvikelse>=2)  return {kons:+6, mult:1.25, typ:"info",
+    text:`Du gav ${namn} ${prio} av ${MAX_POST} i dina prioriteringar. Beslutet stämde med dem och fick större genomslag.`};
+  if(avvikelse>=1)  return {kons:+3, mult:1.10, typ:"info",
+    text:`Beslutet låg ungefär i linje med dina prioriteringar.`};
+  if(avvikelse<=-2) return {kons:-9, mult:0.80, typ:"varning",
+    text:`I dina prioriteringar fick ${namn} bara ${prio} av ${MAX_POST}. Att nu driva motsatsen noterades och togs upp igen.`};
+  if(avvikelse<=-1) return {kons:-4, mult:0.92, typ:"varning",
+    text:`Beslutet gick emot dina prioriteringar på den här punkten.`};
+  return {kons:0, mult:1, text:null};
+}
+
+function tillämpa(v){
+  const k=kostnad(v);
+  let netto=k;
+  if(S.inv.includes("varva")) netto-=0.5;
+  S.kassa=S.kassa-netto;
+  S.senasteUtgift={val:k, varva:S.inv.includes("varva")};
+  if(S.kassa<=0){ S.kassa=0; S.konkurs=true; }
+
+  const dom=linjedom(v);
+  S.senasteLinje=dom;
+  const mult=dom?dom.mult:1;
+
+  SEGMENT.forEach(s => S.lean[s.id]=klamp(S.lean[s.id]+(v.eff[s.id]||0)*LEAN_SKALA*mult));
+
+  S.styre=klamp(S.styre+(v.styre||0));
+  let dk=(v.kons||0)+(dom?dom.kons:0);
+  if(dk<0 && S.inv.includes("press")) dk*=0.6;
+  S.kons=klamp(S.kons+dk);
+
+  SEGMENT.forEach(s => S.lean[s.id]+= (50-S.lean[s.id])*MEDIECYKEL);
+  if(S.inv.includes("org") && S.drag>=Math.floor(DRAGNINGAR/3))
+    SEGMENT.forEach(s => S.lean[s.id]+= (50-S.lean[s.id])*0.12);
+  if(S.inv.includes("annons")){
+    const kvar=Math.max(0, 1.4-S.drag*0.12);
+    SEGMENT.forEach(s => S.lean[s.id]=klamp(S.lean[s.id]+kvar));
+  }
+
+  S.varningar=[];
+  const höga=SEGMENT.filter(s=>S.lean[s.id]>=ÖVRE_GRÄNS);
+  const låga=SEGMENT.filter(s=>S.lean[s.id]<=UNDRE_GRÄNS);
+  if(höga.length){
+    SEGMENT.forEach(s=>{ if(!höga.includes(s)) S.lean[s.id]=klamp(S.lean[s.id]-3.2); });
+    S.varningar.push(`Du uppfattas numera som ett parti för ${höga[0].namn.toLowerCase()}. Övriga grupper drar sig undan.`);
+  }
+  låga.forEach(s=>{
+    S.lean[s.id]=klamp(S.lean[s.id]-2.0);
+    S.varningar.push(`${s.namn} har skrivit av dig. Tappet fortsätter av sig självt.`);
+  });
+
+  if(v.öppnar && !S.låsta.includes(v.öppnar)){
+    const kort=GRUNDDÄCK.find(k=>k.id===v.öppnar);
+    if(kort){
+      S.låsta.push(v.öppnar);
+      const pos=Math.min(S.lek.length-1, S.drag+3+Math.floor(Math.random()*4));
+      S.lek.splice(pos,0,kort);
+      if(S.lek.length>DRAGNINGAR) S.lek.splice(S.lek.length-2,1);
+    }
+  }
+  mätning();
+}
+
+/* ---------- Vyer ---------- */
+
+function vyPartival(){
+  S=null; smulor.innerHTML="&nbsp;";
+  app.innerHTML=stegHTML(1)+`<div class="kort">
+    <h2>Ange parti</h2>
+    <div class="info"><p>Valet kan inte ändras under körningen. Partiprogrammet tilldelas.</p></div>
+    <div id="lista"></div></div>`;
+  const lista=document.getElementById("lista");
+  PARTIER.forEach(p=>{
+    const b=document.createElement("button"); b.className="parti";
+    b.innerHTML=`<b>${p.namn}</b><span>${p.rad}</span>`+
+      `<span class="mål">Mål: ${p.mal}</span>`;
+    b.onclick=()=>{ nyttSpel(p); vyBudget(); };
+    lista.appendChild(b);
+  });
+}
+
+function vyBudget(){
+  const hd=sidhuvud(2,"Prioriteringar");
+  app.innerHTML=hd+`<div id="forhand"></div><div class="kort">
+    <h2>Fastställ dina prioriteringar</h2>
+    <div class="info"><p>Samtliga ${POTT} enheter måste fördelas. Fördelningen sätter utgångsläget hos de fyra väljargrupperna och är det du mäts mot varje gång en fråga rör en post.</p></div>
+    <div id="poster"></div>
+    <div class="pott"><span id="pottText"></span><span id="pottKvar"></span></div>
+    <button class="knapp" id="klar">Fastställ prioriteringarna</button>
+    </div>`;
+  const poster=document.getElementById("poster");
+  const rita=()=>{
+    document.getElementById("forhand").innerHTML=förhandsHTML();
+    const använt=POSTER.reduce((a,p)=>a+S.budget[p.id],0);
+    const kvar=POTT-använt;
+    poster.innerHTML="";
+    POSTER.forEach(p=>{
+      const v=S.budget[p.id];
+      const d=document.createElement("div"); d.className="post";
+      d.innerHTML=`<div class="postNamn"><b>${p.namn}</b><span>${p.rad}</span></div>
+        <button class="stegKnapp" ${v<=0?"disabled":""} data-ner="${p.id}">−</button>
+        <span class="postTal">${v}</span>
+        <button class="stegKnapp" ${(kvar<=0||v>=MAX_POST)?"disabled":""} data-upp="${p.id}">+</button>`;
+      poster.appendChild(d);
+    });
+    poster.querySelectorAll("[data-upp]").forEach(b=>b.onclick=()=>{S.budget[b.dataset.upp]++; rita();});
+    poster.querySelectorAll("[data-ner]").forEach(b=>b.onclick=()=>{S.budget[b.dataset.ner]--; rita();});
+    document.getElementById("pottText").textContent=`Fördelat ${använt} av ${POTT}`;
+    document.getElementById("pottKvar").textContent=`${kvar} kvar`;
+    document.getElementById("klar").disabled = kvar!==0;
+  };
+  rita();
+  document.getElementById("klar").onclick=vyInvestering;
+}
+
+function vyInvestering(){
+  const hd=sidhuvud(3,"Investeringar");
+  app.innerHTML=hd+`<div id="forhand"></div><div class="kort">
+    <h2>Investera partikassan</h2>
+    <div class="info"><p>Disponibelt belopp ${S.parti.kassa} mkr. Flera av posterna påverkar utgångsläget. Investerade medel återförs inte till valrörelsekassan.</p></div>
+    <div id="lista"></div>
+    <div class="pott"><span id="spend"></span><span id="rest"></span></div>
+    <button class="knapp" id="klar">Påbörja valåret</button></div>`;
+  const lista=document.getElementById("lista");
+  const rita=()=>{
+    document.getElementById("forhand").innerHTML=förhandsHTML();
+    const utgift=INVESTERINGAR.filter(i=>S.inv.includes(i.id)).reduce((a,i)=>a+i.pris,0);
+    const kvar=S.parti.kassa-utgift;
+    lista.innerHTML="";
+    INVESTERINGAR.forEach(i=>{
+      const vald=S.inv.includes(i.id);
+      const b=document.createElement("button"); b.className="parti";
+      b.disabled = !vald && i.pris>kvar;
+      b.innerHTML=`<b>${vald?"■":"□"} ${i.namn} · ${i.pris} mkr</b><span>${i.rad}</span>`;
+      b.onclick=()=>{
+        if(vald) S.inv=S.inv.filter(x=>x!==i.id); else S.inv.push(i.id);
+        S.sigma=S.inv.includes("analys")?0.35:0.85;
+        rita();
+      };
+      lista.appendChild(b);
+    });
+    document.getElementById("spend").textContent=`Investerat ${utgift} mkr`;
+    document.getElementById("rest").textContent=`${kvar} mkr till valrörelsen`;
+    document.getElementById("klar").disabled = kvar<6;
+    document.getElementById("klar").textContent = kvar<6
+      ? "För lite kvar till valrörelsen" : "Påbörja valåret";
+  };
+  rita();
+  document.getElementById("klar").onclick=()=>{
+    const utgift=INVESTERINGAR.filter(i=>S.inv.includes(i.id)).reduce((a,i)=>a+i.pris,0);
+    S.kassa=S.parti.kassa-utgift; S.maxKassa=S.kassa;
+    S.lean=startLean();
+    S.start=SEGMENT.reduce((a,s)=>a+S.parti.bas*faktor(S.lean[s.id])*s.vikt,0);
+    mätning(); vyKort();
+  };
+}
+
+/* Förhandsvisning av utgångsläget under uppsättningen */
+function förhandsHTML(){
+  const l=startLean();
+  const bas=S.parti.bas;
+  const tot=SEGMENT.reduce((a,s)=>a+bas*faktor(l[s.id])*s.vikt,0);
+  const rader=SEGMENT.map(s=>{
+    const värde=l[s.id];
+    const fara=värde>=ÖVRE_GRÄNS-6 || värde<=UNDRE_GRÄNS+6;
+    const v=Math.min(värde,50), h=Math.max(värde,50);
+    return `<div class="seg">
+      <div class="segNamn"><span>${s.namn}</span>
+        <em>${värde>50?"+":""}${(värde-50).toFixed(0)}</em></div>
+      <span class="spår">
+        <span class="grans" style="left:${UNDRE_GRÄNS}%"></span>
+        <span class="grans" style="left:${ÖVRE_GRÄNS}%"></span>
+        <span class="mitt"></span>
+        <i class="${fara?'fara':''}" style="left:${v}%;width:${Math.max(h-v,1.2)}%"></i>
+      </span></div>`;
+  }).join("");
+  return `<div class="mätare">
+    <div class="målrad">Mål: <b>${S.parti.mal}</b></div>
+    <p class="etikett">Utgångsläge</p>${rader}
+    <div class="rad2"><div><span class="etikett">Beräknat stöd vid start</span>
+      <div class="baroTal">${tot.toFixed(1)}<small>%</small></div></div>
+      <div class="segTal" style="text-align:right;max-width:190px">Neutralt läge är mitten.<br>Din fördelning förskjuter det.</div>
+    </div></div>`;
+}
+
+function mätarHTML(){
+  const visa=S.inv.includes("stab");
+  const rader=SEGMENT.map(s=>{
+    const l=S.lean[s.id];
+    const fara=l>=ÖVRE_GRÄNS-6 || l<=UNDRE_GRÄNS+6;
+    const v=Math.min(l,50), h=Math.max(l,50);
+    return `<div class="seg">
+      <div class="segNamn"><span>${s.namn}</span>
+        <em>${visa ? (l>50?"+":"")+(l-50).toFixed(0) : (l>53?"▲":l<47?"▼":"–")}</em></div>
+      <span class="spår">
+        <span class="grans" style="left:${UNDRE_GRÄNS}%"></span>
+        <span class="grans" style="left:${ÖVRE_GRÄNS}%"></span>
+        <span class="mitt"></span>
+        <i class="${fara?'fara':''}" style="left:${v}%;width:${Math.max(h-v,1.2)}%"></i>
+      </span></div>`;
+  }).join("");
+  const andel=Math.max(0,Math.min(100,(S.kassa/S.maxKassa)*100));
+  const låg=S.kassa<=8;
+  return `<div class="mätare">
+    <div class="målrad">Mål: <b>${S.parti.mal}</b></div>
+    ${rader}
+    <div class="rad2">
+      <div><span class="etikett">Väljarbarometer</span>
+        <div class="baroTal">${S.visat.toFixed(1)}<small>%</small></div>
+        <div class="segTal">±${(S.sigma*1.96).toFixed(1)} · ${S.inv.includes("analys")?"egen analys":"publicerad"}</div></div>
+      <div class="kassa"><span class="etikett">Partikassa</span>
+        <div class="kassaTal ${låg?'låg':''}">${S.kassa.toFixed(1)}<small> mkr</small></div>
+        <span class="kassaSpår"><i class="${låg?'låg':''}" style="width:${andel}%"></i></span>
+        <div class="segTal">${senT()?"kampanjpris +80 %":"normalpris"}</div></div>
+    </div></div>`;
+}
+
+function prisText(k){
+  if(!k) return `<span class="pris">0 mkr</span>`;
+  if(k>0 && k%1!==0) return `<span class="pris">−${k.toFixed(1)} mkr</span>`;
+  if(k<0)  return `<span class="pris in">+${Math.abs(k)} mkr</span>`;
+  return `<span class="pris">−${k} mkr</span>`;
+}
+
+function vyKort(){
+  const k=S.lek[S.drag];
+  const hd=sidhuvud(4,`Kort ${S.drag+1} av ${S.lek.length}`);
+  app.innerHTML=hd+mätarHTML()+`<div class="kort">
+    <p class="etikett">${k.etikett} · Kort ${S.drag+1} av ${S.lek.length}</p><h2>${k.txt}</h2>
+    <div class="alternativ" id="val"></div>
+    ${senT()?`<p class="utgift">Valrörelsen pågår. Samtliga utgifter är 80 procent högre.</p>`:""}</div>`;
+  const box=document.getElementById("val");
+  ["a","b"].forEach((nyckel,i)=>{
+    const v=k[nyckel];
+    const b=document.createElement("button"); b.className="alt";
+    b.innerHTML=`<span class="valTxt">${v.txt}</span>${prisText(kostnad(v))}`;
+    b.onclick=()=>{ tillämpa(v); vyFöljd(v); };
+    box.appendChild(b);
+  });
+}
+
+function vyFöljd(v){
+  if(S.konkurs){ vyKonkurs(v); return; }
+  const visa=S.inv.includes("stab");
+  const mult=S.senasteLinje?S.senasteLinje.mult:1;
+  const rader=SEGMENT.map(s=>{
+    const d=(v.eff[s.id]||0)*LEAN_SKALA*mult;
+    return `<span>${s.namn}</span><span class="${d>=0?'p':'m'}">${d>=0?'+':''}${d.toFixed(1)}</span>`;
+  }).join("");
+  const sista=S.drag>=S.lek.length-1;
+  const u=S.senasteUtgift;
+  const linje=S.senasteLinje&&S.senasteLinje.text
+    ? `<div class="${S.senasteLinje.typ==="info"?"info":"varning"}" style="margin:0 0 13px">${S.senasteLinje.text}</div>` : "";
+  app.innerHTML=sidhuvud(4,`Kort ${S.drag+1} av ${S.lek.length}`)+mätarHTML()+`<div class="kort">
+    <p class="etikett">Följd</p>
+    <div class="följd"><p>${v.följd}</p></div>
+    ${linje}
+    ${visa?`<p class="etikett" style="margin-top:12px">Egen mätning · förändring</p><div class="utfall">${rader}</div>`
+          :`<p class="blind" style="margin-top:12px">Utan kommunikationsstab ser du bara staplarna.</p>`}
+    <p class="utgift">${u.val<0?`Intäkt ${Math.abs(u.val)} mkr`:`Utgift ${u.val.toFixed(1)} mkr`}${u.varva?" · medlemsvärvning +0,5":""} · kvar ${S.kassa.toFixed(1)} mkr</p>
+    ${S.varningar.map(t=>`<div class="varning">${t}</div>`).join("")}
+    <button class="knapp" id="next" style="margin-top:16px">${sista?"Till valdagen":"Nästa beslut"}</button></div>`;
+  document.getElementById("next").onclick=()=>{
+    S.drag++;
+    if(S.drag>=S.lek.length) vyVal(); else vyKort();
+  };
+}
+
+function vyKonkurs(v){
+  smulor.textContent=(S.parti?S.parti.namn+" · ":"")+"Avbruten";
+  app.innerHTML=stegHTML(4)+`<div class="kort"><p class="etikett">Följd</p>
+    <div class="följd"><p>${v.följd}</p></div></div>
+    <div class="slut"><p class="etikett">Partikassan är tom</p>
+      <strong>Valrörelsen avbryts</strong>
+      <p>Kansliet kan inte betala ut löner för september. Partistyrelsen avvecklar kampanjorganisationen ${S.drag+1} kort in i valåret. Du står kvar på valsedeln.</p>
+      <p style="margin:12px 0 0;color:var(--dämpad);font-size:13px">Stöd vid avbrottet ${total().toFixed(1)} %. Styrning ${S.styre.toFixed(0)}/100. Konsekvens ${S.kons.toFixed(0)}/100.</p>
+      <button class="knapp" id="om" style="margin-top:16px">Försök igen</button></div>`;
+  document.getElementById("om").onclick=vyPartival;
+}
+
+function vyVal(){
+  const sant=total();
+  const vann=S.parti.provaMal({total:sant, kons:S.kons, start:S.start});
+  smulor.textContent=(S.parti?S.parti.namn+" · ":"")+"Valdagen";
+  const rader=SEGMENT.map(s=>{
+    const v=stödI(s.id), l=S.lean[s.id];
+    return `<div class="rad"><span>${s.namn} <span class="segTal">${l>50?"+":""}${(l-50).toFixed(0)}</span></span>
+      <span class="v">${v.toFixed(1)}%</span>
+      <span class="stapel"><i style="width:${Math.max(0,Math.min(100,v*2.4))}%"></i></span></div>`;
+  }).join("");
+  const budgetRader=POSTER.map(p=>`<span>${p.namn}</span><span>${S.budget[p.id]}</span>`).join("");
+  const omdöme=S.styre>=62?"Landet fungerar bättre än när du tillträdde."
+             :S.styre>=48?"Ingenting mätbart har förändrats."
+             :"Flera system fungerar sämre än när du tillträdde.";
+  app.innerHTML=stegHTML(4)+`
+    <div class="kort"><p class="etikett">Valresultat · verkligt utfall</p>
+      <h2>${sant.toFixed(1)} %</h2>
+      <p>Utgångsläge ${S.start.toFixed(1)} %. Sista publicerade mätning ${S.visat.toFixed(1)} %. Kvar i kassan ${S.kassa.toFixed(1)} mkr.</p>
+      ${rader}</div>
+    <div class="dom"><p class="etikett">Ditt mål</p><strong>${S.parti.mal}</strong>
+      <p style="margin:0"><b>${vann?"Uppnått.":"Ej uppnått."}</b> Partiledaren beskriver resultatet som ${vann?"ett tydligt förtroende":"ett besked att ta till sig"}.</p></div>
+    <div class="kort"><p class="etikett">Det som inte mättes</p>
+      <div class="utfall" style="font-size:13.5px">
+        <span>Styrning</span><span>${S.styre.toFixed(0)}/100</span>
+        <span>Konsekvens mot prioriteringarna</span><span>${S.kons.toFixed(0)}/100</span></div>
+      <p style="margin-top:12px">${omdöme}</p>
+      <p class="etikett" style="margin-top:16px">Prioriteringarna du fastställde i januari</p>
+      <div class="utfall" style="font-size:12.5px">${budgetRader}</div>
+      <p style="color:var(--dämpad);font-size:13px;margin:12px 0 0">Ingen av dessa siffror publicerades under valåret.</p>
+      <button class="knapp" id="om" style="margin-top:16px">Spela igen som annat parti</button></div>`;
+  document.getElementById("om").onclick=vyPartival;
+}
+
+(function(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,"0");
+  document.getElementById("uppdaterad").textContent =
+    d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());
+})();
+
+vyPartival();
+</script>
+</body>
+</html>
