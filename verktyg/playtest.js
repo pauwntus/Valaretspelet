@@ -29,8 +29,16 @@ const rad=(t,ok,v)=>console.log("  "+(ok?"✓":"✗")+" "+t.padEnd(52)+v);
 rad("ingen blind strategi i topp 3",
     !rank.slice(0,3).some(r=>r.s in P.BLINDA), rank.slice(0,3).map(r=>r.s).join(", "));
 rad("bästa blinda strategi under 20 %", blind<0.20, (blind*100).toFixed(1)+"%");
-rad("pilläsaren mellan 30 och 55 %",
-    snitt("Pilläsaren")>=0.30&&snitt("Pilläsaren")<=0.55,(snitt("Pilläsaren")*100).toFixed(1)+"%");
+const värst=partier.map(p=>{
+  const b=Math.max(...Object.keys(P.BLINDA).map(s=>rader.find(r=>r.parti===p&&r.spelare===s).vinst));
+  const l=rader.find(r=>r.parti===p&&r.spelare==="Pilläsaren").vinst;
+  return {p,b,l};}).sort((a,b)=>(b.b-b.l)-(a.b-a.l))[0];
+rad("ingen blind strategi slår pilläsaren på något parti",
+    värst.b<=värst.l, `${värst.p}: blind ${(värst.b*100).toFixed(0)} % mot pilläsare ${(värst.l*100).toFixed(0)} %`);
+rad("pilläsaren mellan 25 och 40 %",
+    snitt("Pilläsaren")>=0.25&&snitt("Pilläsaren")<=0.40,(snitt("Pilläsaren")*100).toFixed(1)+"%");
+rad("opinionsspelaren under 75 % — ett tak även för den som förstår",
+    snitt("Opinionsspelaren")<=0.75,(snitt("Opinionsspelaren")*100).toFixed(1)+"%");
 rad("opinionsspelaren minst 25 enheter över pilläsaren",
     snitt("Opinionsspelaren")-snitt("Pilläsaren")>=0.25,
     ((snitt("Opinionsspelaren")-snitt("Pilläsaren"))*100).toFixed(1)+" enheter");

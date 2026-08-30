@@ -2,8 +2,11 @@
    är motvinden, tills en pilläsare klarar målet så ofta som nivån säger.
    Kör efter varje ändring i leken; skriv in de föreslagna talen i PARTIER. */
 const G=require("./logik.js"), P=require("./spelare.js");
-const NIVÅ={"Det gamla partiet":.58,"Vågmästaren":.52,"Enfrågepartiet":.46,
-            "Regeringspartiet":.40,"Utmanaren":.33,"Nykomlingen":.26};
+/* Nivåerna gäller pilläsaren — den som bara följer pressekreterarens råd.
+   Sedan bedömningen blev osäker bär bruset en del av svårigheten, så
+   motvinden får vara mildare än när pilarna alltid stämde. */
+const NIVÅ={"Det gamla partiet":.52,"Vågmästaren":.46,"Enfrågepartiet":.40,
+            "Regeringspartiet":.32,"Utmanaren":.26,"Nykomlingen":.21};
 const N=+process.argv[2]||1200;
 const vinst=(p,skala)=>{
   const grund=p._grund||(p._grund={...p.press});

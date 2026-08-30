@@ -132,6 +132,8 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 .val.klar .berör span.upp{color:#8FD3B4;border-color:#57A183}
 .val.klar .berör span.ned{color:#E8A29A;border-color:#C4584F}
 .val.klar .sida{color:var(--kort)}
+.val .bedom{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);
+  margin-top:8px;font-weight:600}
 .info .kassa .spurttips{font-size:10.5px;color:var(--dim2);margin-top:3px}
 
 /* Vad mätarna gör — står på startskärmen så man vet vad man tittar på */
@@ -141,6 +143,8 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 .roller b{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--guld);
   font-weight:600;flex:0 0 68px}
 .roller span{font-size:12.5px;color:var(--dim);line-height:1.35}
+.roller .fotnot{display:block;font-size:12px;color:var(--guld);line-height:1.4;
+  border-top:1px solid #29313D;padding-top:9px;margin-top:2px}
 .parti i.svårt{display:inline-block;font-style:normal;font-size:10.5px;letter-spacing:.09em;
   text-transform:uppercase;font-weight:600;margin-top:7px;padding:2px 8px;border-radius:99px;
   border:1px solid currentColor}
@@ -159,6 +163,8 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 .facit .rad{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .facit i{font-style:normal;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
 .facit i.upp{color:#2F7D5E} .facit i.ned{color:#B24B41}
+.facit u{display:block;text-decoration:none;font-size:11.5px;color:#B24B41;margin-top:4px;
+  font-weight:600}
 
 
 
@@ -211,6 +217,7 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
       <div class="txt" id="valTxt"></div>
       <div class="kr" id="valKr"></div>
       <div class="berör" id="valBerör"></div>
+      <div class="bedom">Pressekreterarens bedömning</div>
     </div></div>
   </div>
   <div class="yta" id="yta"></div>
@@ -223,6 +230,9 @@ const DRAG_ANTAL=18, SKALA=2.8, ÖVRE=82, UNDRE=18, SEN_FAKTOR=1.7;
 /* Slutspurten: varje kvarvarande miljon köper annonser sista veckan.
    Genomslaget: mediebilden avgör hur mycket av det du gör som faktiskt når väljarna. */
 const SPURT=0.18, GENOMSLAG_MIN=0.15, GENOMSLAG_SPANN=1.70, NYHETSCYKEL=0;
+/* Pilarna i dragbubblan är pressekreterarens bedömning av hur något ska landa,
+   inte ett facit. Ungefär var tionde bedömning är fel åt andra hållet. */
+const BEDÖMNING_FEL=0.10;
 
 /* Varje mätare gör något eget. Väljarna är poängen; de tre andra avgör
    vad du kan göra, vad det kostar, och om någon tar dig på allvar. */
@@ -242,22 +252,22 @@ const SEG=[
 
 const PARTIER=[
  {namn:"Det gamla partiet",rad:"Störst organisation. Krympande väljarbas.",svårt:1,
-  press:{val:-3.06},pressrad:"Väljarna faller av sig själva. Du måste hålla emot.",
-  bas:14.2,kassa:54,mal:"Tappa mindre än 1 procentenhet",prova:s=>s.total>=s.start-1},
+  press:{val:-2.52},pressrad:"Väljarna faller av sig själva. Du måste hålla emot.",
+  bas:14.2,kassa:46,mal:"Tappa mindre än 1 procentenhet",prova:s=>s.total>=s.start-1},
  {namn:"Vågmästaren",rad:"Litet. Avgör vem som styr.",svårt:1,
-  press:{med:-2.78,val:-2.33},pressrad:"Ett litet parti glöms bort mellan utspelen.",
+  press:{med:-2.22,val:-1.86},pressrad:"Ett litet parti glöms bort mellan utspelen.",
   bas:4.2,kassa:42,mal:"Klara spärren på 4 procent",prova:s=>s.total>=4},
  {namn:"Enfrågepartiet",rad:"En fråga. En lojal skara.",svårt:2,
-  press:{val:-2.23,med:-1.82},pressrad:"En fråga bär bara en bit på vägen.",
+  press:{val:-1.98,med:-1.62},pressrad:"En fråga bär bara en bit på vägen.",
   bas:5.2,kassa:42,mal:"Klara spärren med profilen kvar",prova:s=>s.total>=5},
  {namn:"Regeringspartiet",rad:"Sitter vid makten. Har ett facit att försvara.",svårt:2,
-  press:{val:-0.9,par:-0.6},pressrad:"Makten sliter, och allt du gör vägs mot facit.",
+  press:{val:-0.7,par:-0.47},pressrad:"Makten sliter, och allt du gör vägs mot facit.",
   bas:27.5,kassa:50,mal:"Vara största parti",prova:s=>s.total>=28},
  {namn:"Utmanaren",rad:"Största oppositionsparti. Behöver inte leverera.",svårt:3,
-  press:{med:-0.47,blo:-0.51},pressrad:"Granskas som ett regeringsalternativ, behandlas som opposition.",
+  press:{med:-0.37,blo:-0.41},pressrad:"Granskas som ett regeringsalternativ, behandlas som opposition.",
   bas:24.5,kassa:46,mal:"Bli största parti",prova:s=>s.total>=25.5},
  {namn:"Nykomlingen",rad:"Nystartat. Inget att förlora.",svårt:3,
-  press:{par:-0.75},pressrad:"Ingen organisation. Partiet håller ihop bara så länge det går bra.",
+  press:{par:-0.56},pressrad:"Ingen organisation. Partiet håller ihop bara så länge det går bra.",
   bas:3.8,kassa:46,mal:"Ta sig in i riksdagen",prova:s=>s.total>=4},
 ];
 const SVÅRT=["","Lättare valrörelse","Jämn valrörelse","Tuff valrörelse"];
@@ -376,6 +386,25 @@ function totalt(slut){
   return slut?poäng(slutlean())*blockstöd(S.lean):poäng(S.lean);
 }
 
+/* Bedömningen ligger fast under hela valrörelsen — samma kort ger samma råd
+   hur länge man än drar — men blir en ny bedömning nästa gång man spelar. */
+function bedömningFel(kort,sida,id){
+  const t=S.frö+"|"+kort.e+"|"+sida+"|"+id;
+  let h=2166136261;
+  for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619);}
+  return (h>>>0)/4294967296 < BEDÖMNING_FEL;
+}
+
+// Vilka mätare ett val rör och åt vilket håll — aldrig hur mycket.
+// Riktningen är en bedömning som kan slå fel; storleken lär man sig
+// först efter flera valrörelser.
+function berörda(kort,v,sida){
+  return SEG.filter(s=>Math.abs(v.eff[s.id]||0)>=0.05)
+            .map(s=>{const sant=(v.eff[s.id]||0)>0;
+                     const fel=bedömningFel(kort,sida,s.id);
+                     return {seg:s,upp:fel?!sant:sant,sant,fel};});
+}
+
 function blanda(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[x[i],x[j]]=[x[j],x[i]];}return x;}
 
 function nytt(parti){
@@ -384,6 +413,7 @@ function nytt(parti){
   const mitt=blanda(DÄCK.filter(k=>!k.dold&&!k.sist&&k.e!=="Vårändringsbudgeten"));
   const lean={};SEG.forEach(s=>lean[s.id]=50);
   S={parti,lean,kassa:parti.kassa,maxKassa:parti.kassa,historik:[],
+     frö:Math.random().toString(36).slice(2),
      i:0,lek:start.concat(mitt.slice(0,DRAG_ANTAL-2),sist),start:parti.bas,slutOrsak:null,nödlån:false};
 }
 
@@ -447,7 +477,9 @@ function vyStart(){
   yta.innerHTML=`<div class="panel"><h1>Valåret</h1>
     <p class="under">Ett år. Arton beslut. Svep åt det håll du väljer.</p>
     <div class="roller">${SEG.map(s=>
-      `<div><b>${s.namn}</b><span>${s.roll}</span></div>`).join("")}</div>
+      `<div><b>${s.namn}</b><span>${s.roll}</span></div>`).join("")}
+      <div class="fotnot">Pilarna när du drar är din pressekreterares bedömning.
+      Ungefär var tionde är fel. Efteråt ser du vilka.</div></div>
     <div id="lista"></div></div>`;
   const l=document.getElementById("lista");
   PARTIER.forEach(p=>{
@@ -506,13 +538,6 @@ function vyKort(){
 
 const prisTxt=v=>{const c=kostnad(v);return c<0?`+${Math.abs(c)} mkr`:`−${c} mkr`;};
 
-// Vilka mätare ett val rör och åt vilket håll — aldrig hur mycket.
-// Storleken är det man lär sig över flera valrörelser.
-function berörda(v){
-  return SEG.filter(s=>Math.abs(v.eff[s.id]||0)>=0.05)
-            .map(s=>({seg:s,upp:(v.eff[s.id]||0)>0}));
-}
-
 function koppla(el,k){
   let x0=0,dx=0,drar=false;
   const val=document.getElementById("val");
@@ -530,7 +555,7 @@ function koppla(el,k){
     const a=Math.abs(dx);
     if(a<START){ val.style.opacity=0; val.classList.remove("på","klar"); efter.classList.remove("göm"); märk([]); return; }
     const v=dx<0?k.v:k.h;
-    const ber=berörda(v);
+    const ber=berörda(k,v,dx<0?"v":"h");
     vSida.textContent = dx<0 ? "Vänster" : "Höger";
     vTxt.textContent  = v.txt;
     vKr.textContent   = prisTxt(v);
@@ -553,9 +578,11 @@ function koppla(el,k){
     märk([]);
     val.style.opacity=0; val.classList.remove("på","klar");   // bubblan släcks
     const kostade=kostnad(valt);
+    const bedömt=berörda(k,valt,riktning<0?"v":"h");
     verkställ(valt);
     S.historik.push({e:k.e,txt:valt.txt,sida:riktning<0?"Vänster":"Höger",
-      ut:S.sistaUtfall,kost:kostade,f:valt.f});
+      ut:S.sistaUtfall,kost:kostade,f:valt.f,
+      fel:bedömt.filter(b=>b.fel).map(b=>b.seg.namn)});
     S.följd={text:valt.f, ut:S.sistaUtfall, varning:S.varning, ny:true};
     släpp();                                   // kortets lyssnare behövs inte längre
     setTimeout(()=>{
@@ -611,7 +638,9 @@ function vySlut(){
   const facit=S.historik.map((h,i)=>{
     const d=SEG.map(s=>{const n=h.ut[s.id]||0;if(Math.abs(n)<0.05)return"";
       return `<i class="${n<0?'ned':'upp'}">${s.namn.slice(0,3)} ${n>0?'+':''}${n.toFixed(1)}</i>`;}).join("");
-    return `<li><b>${h.e}</b><em>${h.txt}</em><div class="rad">${d}</div></li>`;
+    const fel=h.fel&&h.fel.length
+      ? `<u>Bedömningen slog fel om ${h.fel.join(" och ")}</u>` : "";
+    return `<li><b>${h.e}</b><em>${h.txt}</em><div class="rad">${d}</div>${fel}</li>`;
   }).join("");
 
   yta.innerHTML=`<div class="panel"><div class="slutkort">
