@@ -235,10 +235,10 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 
 <script>
 /* ============ DATA ============ */
-const DRAG_ANTAL=18, SKALA=2.8, ÖVRE=76, UNDRE=24, SEN_FAKTOR=1.7;
+const DRAG_ANTAL=18, SKALA=2.8, ÖVRE=70, UNDRE=30, SEN_FAKTOR=1.7;
 /* Bortom det här spricker något och valrörelsen tar slut i förtid.
-   ÖVRE och UNDRE är varningen som kommer först. */
-const TAK=90, GOLV=10;
+   ÖVRE och UNDRE är varningen, två kort tidigare. */
+const TAK=82, GOLV=18;
 /* Uppmärksamhet svalnar och stämningar återgår. Utan det driver vilket
    envist spelsätt som helst en mätare i väggen av bara farten. */
 const ÅTERGÅNG=0.05;
@@ -263,7 +263,7 @@ const SEG=[
    låg:"Redaktionerna har tröttnat. Det du gör når inte ut.",
    spricker:"Drevet har blivit den enda historien. Partiledningen ber dig hålla dig borta från kameror fram till valdagen.",
    brister:"Ingen ringer längre. Du är ute ur valrörelsen innan den är slut."},
-  {id:"blo",namn:"Blocket",  vikt:.3, tak:82, golv:18, roll:"Dina möjliga samarbetspartier. Belönar förutsägbarhet och institutionell försiktighet, straffar löften som binder dem. Vägs in på valdagen.",
+  {id:"blo",namn:"Blocket",  vikt:.3, roll:"Dina möjliga samarbetspartier. Belönar förutsägbarhet och institutionell försiktighet, straffar löften som binder dem. Vägs in på valdagen.",
    hög:"Du är en förutsägbar partner och betraktas som utbytbar.",
    låg:"Blocket räknar inte längre med dig i förhandlingarna.",
    spricker:"Du är så förutsägbar att blocket räknar dig som en avdelning. Kampanjen drivs vidare utan ditt namn på affischerna.",
@@ -462,10 +462,9 @@ function verkställ(v){
     S.slutOrsak="Partikassan är tom. Distrikten vägrar skjuta till mer, och sista veckans annonser avbeställs.";
     S.slutRubrik="Pengarna tog slut";
   }else{
-    // Blocket rör sig långsammast av alla och har därför egna, snävare gränser
-    const brast=SEG.find(s=>S.lean[s.id]>=(s.tak||TAK)||S.lean[s.id]<=(s.golv||GOLV));
+    const brast=SEG.find(s=>S.lean[s.id]>=TAK||S.lean[s.id]<=GOLV);
     if(brast){
-      const över=S.lean[brast.id]>=(brast.tak||TAK);
+      const över=S.lean[brast.id]>=TAK;
       S.slutOrsak=över?brast.spricker:brast.brister;
       S.slutRubrik=brast.namn+(över?" gick över styr":" bottnade");
     }
@@ -476,7 +475,7 @@ function verkställ(v){
 function ritaHud(){
   if(!S){hud.innerHTML="";return;}
   const g=SEG.map(s=>{
-    const l=S.lean[s.id], d=l-50, fara=l>=ÖVRE-6||l<=UNDRE+6;
+    const l=S.lean[s.id], d=l-50, fara=l>=ÖVRE||l<=UNDRE;
     const a=Math.min(l,50), b=Math.max(l,50);
     const riktn=d>1.5?"upp":d<-1.5?"ned":"";
     return `<div class="gauge ${fara?'fara':''}" id="g-${s.id}" title="${s.namn}: ${s.roll}">
