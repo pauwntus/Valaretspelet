@@ -2,9 +2,13 @@
    Lägena genereras av flera spelstilar, annars mäts bara mitten av banan. */
 const G=require("./logik.js"), P=require("./spelare.js");
 P.frö(0x51DE);
-const stilar=[...Object.values(P.BLINDA).slice(0,3),...Object.values(P.INFORMERADE),
-  (S,k)=>P.max(k.v,k.h,v=>(v.eff.med||0)), (S,k)=>P.min(k.v,k.h,v=>(v.eff.med||0)),
-  (S,k)=>P.max(k.v,k.h,v=>(v.eff.par||0))];
+/* Lägena måste komma från spelsätt som faktiskt överlever hela leken, annars
+   mäts bara de första korten där alla mätare ändå står kring femtio. */
+const stilar=[P.INFORMERADE["Politiska läsaren"],P.INFORMERADE["Fulländade läsaren"],
+  P.INFORMERADE["Noggranna läsaren"],P.INFORMERADE["Slarvläsaren"],
+  (S,k)=>P.max(k.v,k.h,v=>P.prov(S,v).t), (S,k)=>P.min(k.v,k.h,v=>P.prov(S,v).t),
+  (S,k)=>P.max(k.v,k.h,v=>(v.eff.med||0)-(S.lean.med>70?99:0)),
+  (S,k)=>P.max(k.v,k.h,v=>(v.eff.par||0)-(S.lean.par>70?99:0))];
 const stat={};
 for(const p of G.PARTIER)for(const stil of stilar)for(let n=0;n<90;n++){
   G.nytt(p);const S=G.S;
@@ -12,7 +16,9 @@ for(const p of G.PARTIER)for(const stil of stilar)for(let n=0;n<90;n++){
     const k=S.lek[S.i], a=P.prov(S,k.v).t, b=P.prov(S,k.h).t;
     const o=stat[k.e]=stat[k.e]||{v:0,n:0,w:0};
     if(a>=b)o.v++; o.n++; o.w+=Math.abs(a-b)/G.totalt(true);
-    G.verkställ(stil(S,k)); S.i++;
+    G.verkställ(stil(S,k));
+    if(S.slutOrsak)break;              // valrörelsen sprack, resten av leken spelas aldrig
+    S.i++;
   }
 }
 const dolda=new Set(G.DÄCK.filter(k=>k.dold).map(k=>k.e));

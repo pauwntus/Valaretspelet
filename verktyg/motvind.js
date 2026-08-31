@@ -5,8 +5,8 @@ const G=require("./logik.js"), P=require("./spelare.js");
 /* Nivåerna gäller den noggranna läsaren: läser kortet ordentligt och drar
    rätt slutsats ungefär fem gånger av sex, men väger inte mätarna mot
    varandra. Det är den spelaren spelet ska kännas rättvist för. */
-const NIVÅ={"Det gamla partiet":.58,"Vågmästaren":.54,"Enfrågepartiet":.50,
-            "Regeringspartiet":.45,"Utmanaren":.40,"Nykomlingen":.35};
+const NIVÅ={"Det gamla partiet":.56,"Vågmästaren":.50,"Enfrågepartiet":.46,
+            "Regeringspartiet":.42,"Utmanaren":.38,"Nykomlingen":.34};
 const N=+process.argv[2]||1200;
 const vinst=(p,skala)=>{
   const grund=p._grund||(p._grund={...p.press});

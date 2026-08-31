@@ -88,6 +88,8 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 .info .stöd small{font-size:14px;font-weight:400;color:var(--dim)}
 .info .kassa{text-align:right}
 .info .kassa .tal{font-size:22px;font-weight:600;color:var(--guld);line-height:1}
+.info .kassa.fara .tal{color:var(--neg)}
+.info .kassa.fara .spurttips{color:var(--neg)}
 .mål{font-size:12.5px;color:var(--dim);margin:14px 0 0;line-height:1.45}
 
 /* Kortyta */
@@ -195,6 +197,9 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 .parti u{display:block;font-size:12px;color:var(--dim2);text-decoration:none;margin-top:3px}
 .slutkort{background:var(--kort);color:var(--ink);border-radius:18px;padding:26px 24px}
 .slutkort .stor{font-size:38px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.slutkort .haveri{margin:14px 0 0;padding:12px 14px;background:#F4E4DE;border-left:3px solid #B24B41;
+  border-radius:0 6px 6px 0;font-size:14px;line-height:1.45;color:#5A3733}
+.slutkort .haveri b{display:block;font-size:15px;color:#8F332B;margin-bottom:3px}
 .slutkort .stor small{font-size:16px;color:var(--dim2)}
 .dom{margin:18px 0;padding:14px 0;border-top:1px solid #DDD8CE;border-bottom:1px solid #DDD8CE}
 .dom .rubrik{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);margin-bottom:5px}
@@ -230,7 +235,13 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
 
 <script>
 /* ============ DATA ============ */
-const DRAG_ANTAL=18, SKALA=2.8, ÖVRE=82, UNDRE=18, SEN_FAKTOR=1.7;
+const DRAG_ANTAL=18, SKALA=2.8, ÖVRE=76, UNDRE=24, SEN_FAKTOR=1.7;
+/* Bortom det här spricker något och valrörelsen tar slut i förtid.
+   ÖVRE och UNDRE är varningen som kommer först. */
+const TAK=90, GOLV=10;
+/* Uppmärksamhet svalnar och stämningar återgår. Utan det driver vilket
+   envist spelsätt som helst en mätare i väggen av bara farten. */
+const ÅTERGÅNG=0.05;
 /* Slutspurten: varje kvarvarande miljon köper annonser sista veckan.
    Genomslaget: mediebilden avgör hur mycket av det du gör som faktiskt når väljarna. */
 const SPURT=0.18, GENOMSLAG_MIN=0.15, GENOMSLAG_SPANN=1.70, NYHETSCYKEL=0;
@@ -244,36 +255,44 @@ const VISA_NAMN=true;
 const SEG=[
   {id:"par",namn:"Partiet",  vikt:.3, roll:"Ett splittrat parti gör varje utspel dyrare. Räknas knappt på valdagen.",
    hög:"Partiet är enigt och helt inåtvänt. Omvärlden noterar det.",
-   låg:"Ditt eget parti litar inte längre på dig. Allt kostar mer."},
+   låg:"Ditt eget parti litar inte längre på dig. Allt kostar mer.",
+   spricker:"Partiet är enigt om allt utom vad ni ska säga till väljarna. Kongressen tar över valrörelsen, och du åker med.",
+   brister:"Distrikten har slutat svara i telefon. En extrakongress utlyses mitt i valrörelsen."},
   {id:"med",namn:"Media",    vikt:.08, roll:"Förstorar ditt väljarläge på valdagen — åt båda håll. Men klingar av.",
    hög:"Du är överallt. Varje nytt uttalande vägs mot allt du redan sagt.",
-   låg:"Redaktionerna har tröttnat. Det du gör når inte ut."},
-  {id:"blo",namn:"Blocket",  vikt:.3, roll:"Dina möjliga samarbetspartier. Belönar förutsägbarhet och institutionell försiktighet, straffar löften som binder dem. Vägs in på valdagen.",
+   låg:"Redaktionerna har tröttnat. Det du gör når inte ut.",
+   spricker:"Drevet har blivit den enda historien. Partiledningen ber dig hålla dig borta från kameror fram till valdagen.",
+   brister:"Ingen ringer längre. Du är ute ur valrörelsen innan den är slut."},
+  {id:"blo",namn:"Blocket",  vikt:.3, tak:82, golv:18, roll:"Dina möjliga samarbetspartier. Belönar förutsägbarhet och institutionell försiktighet, straffar löften som binder dem. Vägs in på valdagen.",
    hög:"Du är en förutsägbar partner och betraktas som utbytbar.",
-   låg:"Blocket räknar inte längre med dig i förhandlingarna."},
+   låg:"Blocket räknar inte längre med dig i förhandlingarna.",
+   spricker:"Du är så förutsägbar att blocket räknar dig som en avdelning. Kampanjen drivs vidare utan ditt namn på affischerna.",
+   brister:"Blocket har lämnat dig utanför. Du får veta det via en presskonferens du inte var kallad till."},
   {id:"val",namn:"Väljarna", vikt:.32, roll:"Siffran du mäts på — men bara så långt den syns.",
    hög:"Opinionen är med dig, vilket gör varje avsteg dyrare.",
-   låg:"Väljarna har slutat lyssna på vad du säger."}];
+   låg:"Väljarna har slutat lyssna på vad du säger.",
+   spricker:"Varje mätning visar samma sak. Kampanjorganisationen slutar knacka dörr och börjar skriva regeringsförklaringen.",
+   brister:"Väljarna har slutat lyssna. Partiet drar in resurserna och sparar dem till nästa val."}];
 
 const PARTIER=[
  {namn:"Det gamla partiet",rad:"Störst organisation. Krympande väljarbas.",svårt:1,
-  press:{val:-1.13},pressrad:"Väljarna faller av sig själva. Du måste hålla emot.",
-  bas:14.2,kassa:46,mal:"Behålla väljarstödet",prova:s=>s.total>=s.start},
+  press:{val:-1.68},pressrad:"Väljarna faller av sig själva. Du måste hålla emot.",
+  bas:14.2,kassa:54,mal:"Behålla väljarstödet",prova:s=>s.total>=s.start},
  {namn:"Vågmästaren",rad:"Litet. Avgör vem som styr.",svårt:1,
-  press:{med:-2.22,val:-1.9},pressrad:"Ett litet parti glöms bort mellan utspelen.",
-  bas:4.2,kassa:42,mal:"Klara spärren på 4 procent",prova:s=>s.total>=4},
+  press:{med:-1.87,val:-1.6},pressrad:"Ett litet parti glöms bort mellan utspelen.",
+  bas:4.2,kassa:50,mal:"Klara spärren på 4 procent",prova:s=>s.total>=4},
  {namn:"Enfrågepartiet",rad:"En fråga. En lojal skara.",svårt:2,
-  press:{val:-1.9,med:-1.57},pressrad:"En fråga bär bara en bit på vägen.",
-  bas:5.2,kassa:42,mal:"Klara spärren med profilen kvar",prova:s=>s.total>=5},
+  press:{val:-1.76,med:-1.46},pressrad:"En fråga bär bara en bit på vägen.",
+  bas:5.2,kassa:50,mal:"Klara spärren med profilen kvar",prova:s=>s.total>=5},
  {namn:"Regeringspartiet",rad:"Sitter vid makten. Har ett facit att försvara.",svårt:2,
-  press:{val:-0.95,par:-0.61},pressrad:"Makten sliter, och allt du gör vägs mot facit.",
-  bas:27.7,kassa:50,mal:"Vara största parti",prova:s=>s.total>=28},
+  press:{val:-1.45,par:-0.93},pressrad:"Makten sliter, och allt du gör vägs mot facit.",
+  bas:27.7,kassa:58,mal:"Vara största parti",prova:s=>s.total>=28},
  {namn:"Utmanaren",rad:"Största oppositionsparti. Behöver inte leverera.",svårt:3,
-  press:{med:-0.86,blo:-0.93},pressrad:"Granskas som ett regeringsalternativ, behandlas som opposition.",
-  bas:25,kassa:46,mal:"Bli största parti",prova:s=>s.total>=25.5},
+  press:{med:-1.17,blo:-1.27},pressrad:"Granskas som ett regeringsalternativ, behandlas som opposition.",
+  bas:25,kassa:54,mal:"Bli största parti",prova:s=>s.total>=25.5},
  {namn:"Nykomlingen",rad:"Nystartat. Inget att förlora.",svårt:3,
-  press:{par:-1.18},pressrad:"Ingen organisation. Partiet håller ihop bara så länge det går bra.",
-  bas:3.9,kassa:46,mal:"Ta sig in i riksdagen",prova:s=>s.total>=4},
+  press:{par:-1.75},pressrad:"Ingen organisation. Partiet håller ihop bara så länge det går bra.",
+  bas:3.9,kassa:54,mal:"Ta sig in i riksdagen",prova:s=>s.total>=4},
 ];
 const SVÅRT=["","Lättare valrörelse","Jämn valrörelse","Tuff valrörelse"];
 
@@ -409,7 +428,8 @@ function nytt(parti){
   const lean={};SEG.forEach(s=>lean[s.id]=50);
   S={parti,lean,kassa:parti.kassa,maxKassa:parti.kassa,historik:[],
      frö:Math.random().toString(36).slice(2),
-     i:0,lek:start.concat(mitt.slice(0,DRAG_ANTAL-2),sist),start:parti.bas,slutOrsak:null,nödlån:false};
+     i:0,lek:start.concat(mitt.slice(0,DRAG_ANTAL-2),sist),start:parti.bas,
+     slutOrsak:null,slutRubrik:null};
 }
 
 function utfall(v){
@@ -418,23 +438,18 @@ function utfall(v){
 
 function verkställ(v){
   S.kassa=Math.round((S.kassa-kostnad(v))*10)/10;
-  S.nödlån=false;
-  if(S.kassa<0){                                 // slut i kassan stoppar inte en valrörelse,
-    S.lean.par=klamp(S.lean.par+S.kassa*0.8);    // det bara syns på partiet
-    S.kassa=0;S.nödlån=true;
-  }
+  const slutIKassan=S.kassa<0;
+  if(slutIKassan)S.kassa=0;
   const ut=utfall(v);
   SEG.forEach(s=>S.lean[s.id]=klamp(S.lean[s.id]+ut[s.id]));
   const press=S.parti.press||{};                 // partiets egen motvind, varje kort
   for(const id in press) S.lean[id]=klamp(S.lean[id]+press[id]);
+  SEG.forEach(s=>S.lean[s.id]+=(50-S.lean[s.id])*ÅTERGÅNG);
   S.lean.med+=(50-S.lean.med)*NYHETSCYKEL;       // nyhetscykeln: uppmärksamhet klingar av
   S.varning=null;
   const hög=SEG.find(s=>S.lean[s.id]>=ÖVRE), låg=SEG.find(s=>S.lean[s.id]<=UNDRE);
-  if(hög){S.lean[hög.id]=klamp(S.lean[hög.id]-3);   // mjukt tak: överhettningen faller tillbaka
-    SEG.forEach(s=>{if(s!==hög)S.lean[s.id]=klamp(S.lean[s.id]-1);});
-    S.varning=hög.hög;}
-  if(låg){S.lean[låg.id]=klamp(S.lean[låg.id]+1);   // botten studsar, ingen dödsspiral
-    S.varning=låg.låg;}
+  if(hög)S.varning=hög.hög+" Fortsätter det spricker något.";
+  if(låg)S.varning=låg.låg+" Fortsätter det är valrörelsen över.";
   S.sistaUtfall=ut;
   if(v.öppnar!==undefined){
     // Gentjänsten ersätter ett kommande kort — valrörelsen blir inte längre,
@@ -442,7 +457,19 @@ function verkställ(v){
     const k=DÄCK.find(x=>x.dold);
     if(k&&!S.lek.includes(k)){const p=Math.min(S.lek.length-2,S.i+2+(Math.random()*3|0));S.lek.splice(p,1,k);}
   }
-  if(S.nödlån)S.varning="Kassan är tom. Distrikten fick låna ut, och de kommer att påminna om det.";
+  // Går något över kanten är valrörelsen slut där den står.
+  if(slutIKassan){
+    S.slutOrsak="Partikassan är tom. Distrikten vägrar skjuta till mer, och sista veckans annonser avbeställs.";
+    S.slutRubrik="Pengarna tog slut";
+  }else{
+    // Blocket rör sig långsammast av alla och har därför egna, snävare gränser
+    const brast=SEG.find(s=>S.lean[s.id]>=(s.tak||TAK)||S.lean[s.id]<=(s.golv||GOLV));
+    if(brast){
+      const över=S.lean[brast.id]>=(brast.tak||TAK);
+      S.slutOrsak=över?brast.spricker:brast.brister;
+      S.slutRubrik=brast.namn+(över?" gick över styr":" bottnade");
+    }
+  }
 }
 
 /* ============ VYER ============ */
@@ -461,10 +488,19 @@ function ritaHud(){
     <div class="info">
       <div><div class="märk">Väljarstöd</div>
         <div class="stöd">${totalt().toFixed(1)}<small> %</small></div></div>
-      <div class="kassa"><div class="märk">Partikassa</div>
+      <div class="kassa ${knapptOmKassan()?'fara':''}"><div class="märk">Partikassa</div>
         <div class="tal">${S.kassa.toFixed(1)} mkr</div>
-        <div class="spurttips">räcker till +${spurt().toFixed(1)} hos väljarna</div></div></div>
+        <div class="spurttips">${knapptOmKassan()
+          ? "räcker inte hela vägen"
+          : "räcker till +"+spurt().toFixed(1)+" hos väljarna"}</div></div></div>
     <p class="mål">${S.parti.mal}<br>Kort ${Math.min(S.i+1,S.lek.length)} av ${S.lek.length}</p>`;
+}
+
+/* Sant när kassan inte räcker till ett normalpris för korten som är kvar.
+   Det är den varning man behöver för att hinna välja billigare. */
+function knapptOmKassan(){
+  const kvar=Math.max(1,S.lek.length-S.i);
+  return S.kassa < kvar*2.2*(sen()?SEN_FAKTOR:1)*enighet();
 }
 
 function vyStart(){
@@ -579,6 +615,7 @@ function koppla(el,k){
     S.följd={text:valt.f, ut:S.sistaUtfall, varning:S.varning, ny:true};
     släpp();                                   // kortets lyssnare behövs inte längre
     setTimeout(()=>{
+      if(S.slutOrsak) return vySlut();         // valrörelsen sprack här
       S.i++;
       if(S.i>=S.lek.length) vySlut(); else vyKort();
     },300);
@@ -612,21 +649,26 @@ function koppla(el,k){
 function vySlut(){
   const vb=document.getElementById("val");
   if(vb){vb.style.opacity=0;vb.classList.remove("på","klar");}
-  const t=totalt(true), vann=S.parti.prova({total:t,start:S.start});
+  const avbrutet=!!S.slutOrsak;
+  const t=totalt(true), vann=!avbrutet&&S.parti.prova({total:t,start:S.start});
   ritaHud();hint.textContent="";panelvy(true);
-  // Valdagen räknas i fyra led, så man ser var resultatet kom ifrån
+  // Valdagen räknas i fyra led, så man ser var resultatet kom ifrån.
+  // Nådde man aldrig dit visas i stället var det stod när det sprack.
   const tecken=x=>(x>=0?"+":"−")+Math.abs(x).toFixed(1);
   const eftMedia=medGenomslag(S.lean), eftSpurt=medSpurt(eftMedia);
   const a=poäng(S.lean), b=poäng(eftMedia), c=poäng(eftSpurt);
   const g=genomslag();
   const steg=(v,d)=>`${v.toFixed(1)} %<em>${tecken(d)}</em>`;
-  const rader=[
-    ["Ditt läge före valdagen",`${a.toFixed(1)} %`],
-    [`Genomslag i media ×${g.toFixed(2)}`,steg(b,b-a)],
-    [spurt()>0.05?`Slutspurt, ${S.kassa.toFixed(1)} mkr`:"Slutspurt, tom kassa",steg(c,c-b)],
-    ["Blocket "+(S.lean.blo>=55?"räknar med dig":S.lean.blo<=45?"räknar inte med dig":"varken eller"),
-      steg(t,t-c)],
-  ].map(([x,y])=>`<span>${x}</span><span>${y}</span>`).join("");
+  const rader=(avbrutet
+    ? [["Hann spela",`${S.historik.length} av ${S.lek.length} kort`],
+       ...SEG.map(s=>[s.namn,`${S.lean[s.id].toFixed(0)}<em>av 100</em>`]),
+       ["Kvar i kassan",`${S.kassa.toFixed(1)} mkr`]]
+    : [["Ditt läge före valdagen",`${a.toFixed(1)} %`],
+       [`Genomslag i media ×${g.toFixed(2)}`,steg(b,b-a)],
+       [spurt()>0.05?`Slutspurt, ${S.kassa.toFixed(1)} mkr`:"Slutspurt, tom kassa",steg(c,c-b)],
+       ["Blocket "+(S.lean.blo>=55?"räknar med dig":S.lean.blo<=45?"räknar inte med dig":"varken eller"),
+        steg(t,t-c)]]
+  ).map(([x,y])=>`<span>${x}</span><span>${y}</span>`).join("");
 
   const facit=S.historik.map((h,i)=>{
     const d=SEG.map(s=>{const n=h.ut[s.id]||0;if(Math.abs(n)<0.05)return"";
@@ -636,11 +678,13 @@ function vySlut(){
 
   yta.innerHTML=`<div class="panel"><div class="slutkort">
     <div class="etikett" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#8A93A0;margin-bottom:10px">
-      Valresultat</div>
-    <div class="stor">${t.toFixed(1)}<small> %</small></div>
-    ${S.följd?`<div style="font-size:14px;color:#4A525E;margin-bottom:14px">${S.följd.text}</div>`:""}
+      ${avbrutet?"Valrörelsen avbröts efter kort "+S.historik.length:"Valresultat"}</div>
+    <div class="stor">${t.toFixed(1)}<small> %${avbrutet?" när det sprack":""}</small></div>
+    ${avbrutet
+      ? `<div class="haveri"><b>${S.slutRubrik}</b>${S.slutOrsak}</div>`
+      : (S.följd?`<div style="font-size:14px;color:#4A525E;margin-bottom:14px">${S.följd.text}</div>`:"")}
     <div class="dom"><div class="rubrik">${S.parti.namn}</div>
-      <b>${vann?"Målet uppnått":"Målet ej uppnått"}</b>
+      <b>${avbrutet?"Du nådde aldrig valdagen":(vann?"Målet uppnått":"Målet ej uppnått")}</b>
       <div style="font-size:13.5px;color:#4A525E;margin-top:6px">${S.parti.mal}. Utgångsläge ${S.start.toFixed(1)} %.</div></div>
     <div class="tabell">${rader}</div>
     <button class="knapp" id="visa">Visa valrörelsen beslut för beslut</button>
