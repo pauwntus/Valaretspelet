@@ -1,8 +1,13 @@
 /* Spelararketyperna. Delas av alla mätningar så siffrorna går att jämföra. */
 const G=require("./logik.js");
 
+/* Ett drag som spräcker valrörelsen är inte värt sina mätarutslag — det
+   förlorar spelet. Provet måste säga det, annars mäter allt fel. */
 const prov=(S,v)=>{const sp=G.S;G.S=G.klon(S);G.verkställ(v);
-  const r={t:G.totalt(true),lean:{...G.S.lean},kassa:G.S.kassa};G.S=sp;return r;};
+  const avbrutet=!!G.S.slutOrsak;
+  const r={t:avbrutet?G.totalt(true)*0.5:G.totalt(true),
+    rå:G.totalt(true),avbrutet,lean:{...G.S.lean},kassa:G.S.kassa};
+  G.S=sp;return r;};
 
 /* Exakt det som står på skärmen: priset och vilka mätare som står på spel.
    Ingen riktning — den ska läsas ur kortets text. */
@@ -57,26 +62,44 @@ const läsare=(tH,tB,väg)=>(S,k)=>max(k.v,k.h,v=>{
   const y=synligt(S,k,v,sidaAv(k,v));
   return väg(S,läser(S,k,v,sidaAv(k,v),tH,tB),y);
 });
-/* Följer det kortet handlar om, väger bieffekterna lättare */
-const rubrik=(S,l,y)=>l.reduce((a,t)=>a+(t.upp?1:-1)*(t.huvud?2.5:1),0)*10-y.kost/100;
-/* Väger dessutom varje mätare efter vad den är värd i det läge man står i */
+/* Följer det kortet handlar om, väger bieffekterna lättare. Ser också när en
+   mätare närmar sig kanten och drar sig undan — det gör vem som helst som
+   tittar på skärmen, och kräver ingen kunskap om vad mätarna är värda. */
+const kant=(S,id,upp)=>{
+  const l=S.lean[id], nära=upp?l-(G.TAK-22):(G.GOLV+22)-l;
+  return nära>0?-nära*4:0;
+};
+/* Vad ett pris känns som: dyrt i förhållande till vad som finns kvar per kort.
+   Kräver ingen kunskap om spelet, bara att man tittar på kassaräknaren. */
+const pris=(S,kost)=>{
+  const kvar=Math.max(1,S.lek.length-S.i), budget=S.kassa/kvar;
+  return kost<=budget?-kost*0.4:-(budget*0.4+(kost-budget)*9);
+};
+const rubrik=(S,l,y)=>l.reduce((a,t)=>
+  a+(t.upp?1:-1)*(t.huvud?2.5:1)*10+kant(S,t.id,t.upp),0)+pris(S,y.kost);
+/* Väger dessutom varje mätare efter vad den är värd i det läge man står i.
+   Kant och pris vägs på samma skala som rubrikmodellen, annars går de två
+   spelarna inte att jämföra. */
 const vägd=(S,l,y)=>{
   const marginal=id=>{const sp=G.S,bas=G.totalt(true);
     G.S=G.klon(S);G.S.lean[id]=G.klamp(G.S.lean[id]+1);
     const d=G.totalt(true)-bas;G.S=sp;return d;};
   const m={};for(const s of G.SEG)m[s.id]=marginal(s.id);
-  const kvar=S.lek.length-S.i, kassavärde=S.kassa<22?0.055:0.02;
-  let p=l.reduce((a,t)=>a+(t.upp?1:-1)*m[t.id]*G.SKALA,0);
-  p+=Math.max(0,50-S.lean.par)/70*kvar*0.05*
-     (l.some(t=>t.id==="par"&&t.upp)?1:l.some(t=>t.id==="par")?-1:0);
-  return p-y.kost*kassavärde*G.totalt(true)/100;
+  const störst=Math.max(...Object.values(m).map(Math.abs))||1;
+  return l.reduce((a,t)=>
+    a+(t.upp?1:-1)*(m[t.id]/störst)*(t.huvud?2.5:1)*10+kant(S,t.id,t.upp),0)+pris(S,y.kost);
 };
+
 const INFORMERADE={
   "Slarvläsaren":      läsare(0.75,0.55,rubrik),  // ögnar kortet
   "Noggranna läsaren": läsare(0.92,0.72,rubrik),  // läser ordentligt, följer rubriken
   "Politiska läsaren": läsare(0.92,0.72,vägd),    // läser ordentligt och vet vad mätarna är värda
   "Fulländade läsaren":läsare(1.00,1.00,vägd),    // läser rätt varje gång
 };
+/* Läser lika bra som den noggranna, men tittar aldrig upp på mätarna eller
+   kassan. Finns för att pröva om spelets två haverier alls går att gå in i. */
+const blint=(S,l,y)=>l.reduce((a,t)=>a+(t.upp?1:-1)*(t.huvud?2.5:1),0)*10;
+INFORMERADE["Envisa läsaren"]=läsare(0.92,0.72,blint);
 
 /* Känner varje siffra i tabellen. Taket, inte en människa. */
 const FACIT={"Optimeraren":(S,k)=>max(k.v,k.h,v=>prov(S,v).t)};
@@ -84,16 +107,18 @@ const FACIT={"Optimeraren":(S,k)=>max(k.v,k.h,v=>prov(S,v).t)};
 const ALLA={...BLINDA,...INFORMERADE,...FACIT};
 
 function spela(parti,strategi){
-  G.nytt(parti);const S=G.S;const val=[];let lån=0;
-  while(S.i<S.lek.length){
+  G.nytt(parti);const S=G.S;const val=[];
+  while(!S.slutOrsak&&S.i<S.lek.length){
     const k=S.lek[S.i],v=strategi(S,k);
     val.push({e:k.e,sida:v===k.v?"v":"h"});
-    G.verkställ(v);if(S.nödlån)lån++;
+    G.verkställ(v);
+    if(S.slutOrsak)break;
     S.i++;
   }
-  const t=G.totalt(true);
-  return {t,rel:t/parti.bas,vann:parti.prova({total:t,start:S.start}),
-    kassa:S.kassa,lån,lean:{...S.lean},val};
+  const avbrutet=!!S.slutOrsak, t=G.totalt(true);
+  return {t,rel:t/parti.bas,avbrutet,rubrik:S.slutRubrik,drag:val.length,
+    vann:!avbrutet&&parti.prova({total:t,start:S.start}),
+    kassa:S.kassa,lean:{...S.lean},val};
 }
 
 let _s=1;

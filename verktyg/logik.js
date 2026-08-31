@@ -13,7 +13,7 @@ vm.createContext(sandlåda);
 vm.runInContext(kod+`
 ;this.__ut={SEG,PARTIER,DÄCK,SVÅRT,DRAG_ANTAL,SKALA,ÖVRE,UNDRE,SEN_FAKTOR,SPURT,
   GENOMSLAG_MIN,GENOMSLAG_SPANN,NYHETSCYKEL,klamp,faktor,totalt,poäng,sen,kostnad,blanda,
-  nytt,verkställ,utfall,genomslag,enighet,spurt,slutlean,berörda,VISA_NAMN,
+  nytt,verkställ,utfall,genomslag,enighet,spurt,slutlean,berörda,VISA_NAMN,TAK,GOLV,
   hämtaS:()=>S, sättS:v=>{S=v}};`,sandlåda);
 
 const U=sandlåda.__ut;
@@ -21,6 +21,6 @@ const U=sandlåda.__ut;
 module.exports=Object.assign({},U,{
   /* kopia av tillståndet, för att prova ett drag utan att göra det */
   klon:S=>({parti:S.parti,lean:{...S.lean},kassa:S.kassa,maxKassa:S.maxKassa,historik:[],
-    i:S.i,lek:S.lek.slice(),start:S.start,slutOrsak:S.slutOrsak,nödlån:false}),
+    i:S.i,lek:S.lek.slice(),start:S.start,slutOrsak:null,slutRubrik:null}),
 });
 Object.defineProperty(module.exports,"S",{get:U.hämtaS,set:U.sättS,enumerable:true});
