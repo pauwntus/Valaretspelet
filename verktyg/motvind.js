@@ -2,14 +2,17 @@
    är motvinden, tills en pilläsare klarar målet så ofta som nivån säger.
    Kör efter varje ändring i leken; skriv in de föreslagna talen i PARTIER. */
 const G=require("./logik.js"), P=require("./spelare.js");
-const NIVÅ={"Det gamla partiet":.58,"Vågmästaren":.52,"Enfrågepartiet":.46,
-            "Regeringspartiet":.40,"Utmanaren":.33,"Nykomlingen":.26};
+/* Nivåerna gäller den noggranna läsaren: läser kortet ordentligt och drar
+   rätt slutsats ungefär fem gånger av sex, men väger inte mätarna mot
+   varandra. Det är den spelaren spelet ska kännas rättvist för. */
+const NIVÅ={"Det gamla partiet":.58,"Vågmästaren":.54,"Enfrågepartiet":.50,
+            "Regeringspartiet":.45,"Utmanaren":.40,"Nykomlingen":.35};
 const N=+process.argv[2]||1200;
 const vinst=(p,skala)=>{
   const grund=p._grund||(p._grund={...p.press});
   p.press={};for(const id in grund)p.press[id]=grund[id]*skala;
   P.frö(0xC0FFEE);let w=0;
-  for(let n=0;n<N;n++) if(P.spela(p,P.INFORMERADE["Pilläsaren"]).vann)w++;
+  for(let n=0;n<N;n++) if(P.spela(p,P.INFORMERADE["Noggranna läsaren"]).vann)w++;
   return w/N;
 };
 console.log("parti".padEnd(20)+"mål      nivå   utfall   föreslagen motvind");

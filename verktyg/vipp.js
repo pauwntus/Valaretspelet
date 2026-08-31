@@ -2,14 +2,14 @@
    Slutskärmens facit visar de här korten, så det ska kännas som en miss. */
 const G=require("./logik.js"), P=require("./spelare.js");
 const N=+process.argv[2]||1000;
-function körLek(parti,lek,val){
+function körLek(parti,lek,val,frö){
   G.S={parti,lean:Object.fromEntries(G.SEG.map(s=>[s.id,50])),kassa:parti.kassa,
        maxKassa:parti.kassa,historik:[],i:0,lek:lek.slice(),start:parti.bas,
-       slutOrsak:null,nödlån:false};
+       slutOrsak:null,nödlån:false,frö};   // samma bedömningar i alla omspel av samma valrörelse
   const S=G.S,gjorda=[];
   while(S.i<S.lek.length){
     const k=S.lek[S.i];
-    const h=val[S.i]!==undefined?val[S.i]:(P.INFORMERADE["Pilläsaren"](S,k)===k.v?0:1);
+    const h=val[S.i]!==undefined?val[S.i]:(P.INFORMERADE["Noggranna läsaren"](S,k)===k.v?0:1);
     gjorda.push(h);G.verkställ(h?k.h:k.v);S.i++;
   }
   const t=G.totalt(true);
@@ -22,12 +22,13 @@ for(const p of G.PARTIER){
   let förluster=0,nära=0,vipp=0;
   for(let n=0;n<N;n++){
     G.nytt(p);const lek=G.S.lek.slice();
-    const bas=körLek(p,lek,[]);
+    const frö=G.S.frö;
+    const bas=körLek(p,lek,[],frö);
     if(bas.vann)continue;
     förluster++;let v=0;
     for(let j=0;j<bas.val.length;j++){
       const alt=bas.val.slice();alt[j]=1-alt[j];
-      if(körLek(p,lek,alt).vann)v++;
+      if(körLek(p,lek,alt,frö).vann)v++;
     }
     if(v){nära++;vipp+=v;}
   }

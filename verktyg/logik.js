@@ -13,7 +13,7 @@ vm.createContext(sandlåda);
 vm.runInContext(kod+`
 ;this.__ut={SEG,PARTIER,DÄCK,SVÅRT,DRAG_ANTAL,SKALA,ÖVRE,UNDRE,SEN_FAKTOR,SPURT,
   GENOMSLAG_MIN,GENOMSLAG_SPANN,NYHETSCYKEL,klamp,faktor,totalt,poäng,sen,kostnad,blanda,
-  nytt,verkställ,utfall,genomslag,enighet,spurt,slutlean,
+  nytt,verkställ,utfall,genomslag,enighet,spurt,slutlean,berörda,VISA_NAMN,
   hämtaS:()=>S, sättS:v=>{S=v}};`,sandlåda);
 
 const U=sandlåda.__ut;

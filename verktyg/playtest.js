@@ -29,8 +29,17 @@ const rad=(t,ok,v)=>console.log("  "+(ok?"✓":"✗")+" "+t.padEnd(52)+v);
 rad("ingen blind strategi i topp 3",
     !rank.slice(0,3).some(r=>r.s in P.BLINDA), rank.slice(0,3).map(r=>r.s).join(", "));
 rad("bästa blinda strategi under 20 %", blind<0.20, (blind*100).toFixed(1)+"%");
-rad("pilläsaren mellan 30 och 55 %",
-    snitt("Pilläsaren")>=0.30&&snitt("Pilläsaren")<=0.55,(snitt("Pilläsaren")*100).toFixed(1)+"%");
-rad("opinionsspelaren minst 25 enheter över pilläsaren",
-    snitt("Opinionsspelaren")-snitt("Pilläsaren")>=0.25,
-    ((snitt("Opinionsspelaren")-snitt("Pilläsaren"))*100).toFixed(1)+" enheter");
+const värst=partier.map(p=>{
+  const b=Math.max(...Object.keys(P.BLINDA).map(s=>rader.find(r=>r.parti===p&&r.spelare===s).vinst));
+  const l=rader.find(r=>r.parti===p&&r.spelare==="Noggranna läsaren").vinst;
+  return {p,b,l};}).sort((a,b)=>(b.b-b.l)-(a.b-a.l))[0];
+rad("ingen blind strategi slår den noggranna läsaren på något parti",
+    värst.b<=värst.l, `${värst.p}: blind ${(värst.b*100).toFixed(0)} % mot läsare ${(värst.l*100).toFixed(0)} %`);
+rad("den noggranna läsaren mellan 40 och 60 %",
+    snitt("Noggranna läsaren")>=0.40&&snitt("Noggranna läsaren")<=0.60,(snitt("Noggranna läsaren")*100).toFixed(1)+"%");
+rad("LÄSNINGEN är färdigheten: 20+ enheter mot slarvläsaren",
+    snitt("Noggranna läsaren")-snitt("Slarvläsaren")>=0.20,
+    ((snitt("Noggranna läsaren")-snitt("Slarvläsaren"))*100).toFixed(1)+" enheter");
+rad("mätarkunskap ger ett tillskott, inte hela spelet: 8–30 enheter",
+    snitt("Politiska läsaren")-snitt("Noggranna läsaren")>=0.08&&snitt("Politiska läsaren")-snitt("Noggranna läsaren")<=0.30,
+    ((snitt("Politiska läsaren")-snitt("Noggranna läsaren"))*100).toFixed(1)+" enheter");
