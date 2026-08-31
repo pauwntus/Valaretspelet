@@ -21,6 +21,6 @@ const U=sandlåda.__ut;
 module.exports=Object.assign({},U,{
   /* kopia av tillståndet, för att prova ett drag utan att göra det */
   klon:S=>({parti:S.parti,lean:{...S.lean},kassa:S.kassa,maxKassa:S.maxKassa,historik:[],
-    i:S.i,lek:S.lek.slice(),start:S.start,slutOrsak:null,slutRubrik:null}),
+    i:S.i,lek:S.lek.slice(),start:S.start,slutOrsak:null,slutRubrik:null,ohållbart:{...S.ohållbart}}),
 });
 Object.defineProperty(module.exports,"S",{get:U.hämtaS,set:U.sättS,enumerable:true});
