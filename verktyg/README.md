@@ -12,7 +12,12 @@ node verktyg/playtest.js [n]   # vem vinner? arketyper × partier
 node verktyg/intresse.js       # är besluten äkta val, och väger korten jämnt?
 node verktyg/vipp.js [n]       # hur nära är förlusterna?
 node verktyg/motvind.js [n]    # ställ svårighetsgraden utan att röra målen
+node verktyg/slumptest.js [n] # spelar riktiga sidan i webbläsare (kräver playwright)
 ```
+
+`slumptest.js` är det enda verktyget som kör den levererade sidan i stället för
+den utklippta logiken. Använd det när en mätning känns för bra för att vara sann
+— det var så skillnaden mellan simulatorn och verkligheten kunde bekräftas.
 
 ## Spelararketyperna
 
