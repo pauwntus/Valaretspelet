@@ -15,14 +15,18 @@ for(const p of G.PARTIER)for(const stil of stilar)for(let n=0;n<90;n++){
     G.verkställ(stil(S,k)); S.i++;
   }
 }
-const rader=Object.entries(stat).map(([e,o])=>({e,vänster:o.v/o.n,vikt:o.w/o.n*100}))
+const dolda=new Set(G.DÄCK.filter(k=>k.dold).map(k=>k.e));
+const total=Object.values(stat).reduce((a,o)=>a+o.n,0);
+const rader=Object.entries(stat).map(([e,o])=>
+  ({e,vänster:o.v/o.n,vikt:o.w/o.n*100,dold:dolda.has(e),andel:o.n/total*20}))
   .sort((a,b)=>b.vikt-a.vikt);
 const tot=rader.reduce((a,r)=>a+r.vikt,0);
 console.log("kort".padEnd(26)+"tyngd   rätt svar = vänster   status");
 for(const r of rader){
   const låst=r.vänster>0.93||r.vänster<0.07;
   console.log(r.e.padEnd(26)+(r.vikt.toFixed(2)+"%").padStart(6)+
-    (100*r.vänster).toFixed(0).padStart(15)+"%   "+(låst?"alltid samma sida":"beror på läget"));
+    (100*r.vänster).toFixed(0).padStart(15)+"%   "+(låst?"alltid samma sida":"beror på läget")+
+    (r.dold?"   (dolt kort, dyker upp i "+(r.andel*100).toFixed(0)+" % av valrörelserna)":""));
 }
 const låsta=rader.filter(r=>r.vänster>0.93||r.vänster<0.07).length;
 const topp6=rader.slice(0,6).reduce((a,r)=>a+r.vikt,0)/tot;
@@ -30,5 +34,8 @@ console.log("\nKRITERIER");
 const rad=(t,ok,v)=>console.log("  "+(ok?"✓":"✗")+" "+t.padEnd(52)+v);
 rad("minst hälften av korten är äkta bedömningsfrågor",låsta<=10,(20-låsta)+" av 20");
 rad("topp 6 kort under 55 % av beslutstyngden",topp6<0.55,(topp6*100).toFixed(0)+"%");
-rad("inget kort under 1,5 % tyngd",rader.every(r=>r.vikt>=1.5),
-  "minst: "+rader[rader.length-1].e+" "+rader[rader.length-1].vikt.toFixed(2)+"%");
+// det dolda kortet är sällsynt, inte betydelselöst — det mäts inte mot samma tröskel
+const vanliga=rader.filter(r=>!r.dold);
+const lättast=vanliga[vanliga.length-1];
+rad("inget vanligt kort under 1,5 % tyngd",vanliga.every(r=>r.vikt>=1.5),
+  "lättast: "+lättast.e+" "+lättast.vikt.toFixed(2)+"%");

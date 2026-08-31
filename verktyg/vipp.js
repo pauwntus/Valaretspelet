@@ -9,7 +9,7 @@ function körLek(parti,lek,val,frö){
   const S=G.S,gjorda=[];
   while(S.i<S.lek.length){
     const k=S.lek[S.i];
-    const h=val[S.i]!==undefined?val[S.i]:(P.INFORMERADE["Pilläsaren"](S,k)===k.v?0:1);
+    const h=val[S.i]!==undefined?val[S.i]:(P.INFORMERADE["Noggranna läsaren"](S,k)===k.v?0:1);
     gjorda.push(h);G.verkställ(h?k.h:k.v);S.i++;
   }
   const t=G.totalt(true);

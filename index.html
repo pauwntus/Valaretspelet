@@ -217,7 +217,7 @@ body{background:var(--bg);color:var(--kort);min-height:100dvh;
       <div class="txt" id="valTxt"></div>
       <div class="kr" id="valKr"></div>
       <div class="berör" id="valBerör"></div>
-      <div class="bedom">Pressekreterarens bedömning</div>
+      <div class="bedom">Står på spel</div>
     </div></div>
   </div>
   <div class="yta" id="yta"></div>
@@ -230,129 +230,130 @@ const DRAG_ANTAL=18, SKALA=2.8, ÖVRE=82, UNDRE=18, SEN_FAKTOR=1.7;
 /* Slutspurten: varje kvarvarande miljon köper annonser sista veckan.
    Genomslaget: mediebilden avgör hur mycket av det du gör som faktiskt når väljarna. */
 const SPURT=0.18, GENOMSLAG_MIN=0.15, GENOMSLAG_SPANN=1.70, NYHETSCYKEL=0;
-/* Pilarna i dragbubblan är pressekreterarens bedömning av hur något ska landa,
-   inte ett facit. Ungefär var tionde bedömning är fel åt andra hållet. */
-const BEDÖMNING_FEL=0.10;
+/* Dragbubblan säger vilka mätare som står på spel, aldrig åt vilket håll.
+   Riktningen ska gå att läsa ur kortets text; det är hela beslutet.
+   Sätt VISA_NAMN till false för att inte ens avslöja vilka mätare det gäller. */
+const VISA_NAMN=true;
 
 /* Varje mätare gör något eget. Väljarna är poängen; de tre andra avgör
    vad du kan göra, vad det kostar, och om någon tar dig på allvar. */
 const SEG=[
-  {id:"par",namn:"Partiet",  vikt:.24, roll:"Ett splittrat parti gör varje utspel dyrare. Räknas knappt på valdagen.",
+  {id:"par",namn:"Partiet",  vikt:.3, roll:"Ett splittrat parti gör varje utspel dyrare. Räknas knappt på valdagen.",
    hög:"Partiet är enigt och helt inåtvänt. Omvärlden noterar det.",
    låg:"Ditt eget parti litar inte längre på dig. Allt kostar mer."},
-  {id:"med",namn:"Media",    vikt:.12, roll:"Förstorar ditt väljarläge på valdagen — åt båda håll. Men klingar av.",
+  {id:"med",namn:"Media",    vikt:.08, roll:"Förstorar ditt väljarläge på valdagen — åt båda håll. Men klingar av.",
    hög:"Du är överallt. Varje nytt uttalande vägs mot allt du redan sagt.",
    låg:"Redaktionerna har tröttnat. Det du gör når inte ut."},
-  {id:"blo",namn:"Blocket",  vikt:.26, roll:"Väger in på valdagen: räknas du som ett regeringsalternativ?",
+  {id:"blo",namn:"Blocket",  vikt:.3, roll:"Dina möjliga samarbetspartier. Belönar förutsägbarhet och institutionell försiktighet, straffar löften som binder dem. Vägs in på valdagen.",
    hög:"Du är en förutsägbar partner och betraktas som utbytbar.",
    låg:"Blocket räknar inte längre med dig i förhandlingarna."},
-  {id:"val",namn:"Väljarna", vikt:.38, roll:"Siffran du mäts på — men bara så långt den syns.",
+  {id:"val",namn:"Väljarna", vikt:.32, roll:"Siffran du mäts på — men bara så långt den syns.",
    hög:"Opinionen är med dig, vilket gör varje avsteg dyrare.",
    låg:"Väljarna har slutat lyssna på vad du säger."}];
 
 const PARTIER=[
  {namn:"Det gamla partiet",rad:"Störst organisation. Krympande väljarbas.",svårt:1,
-  press:{val:-2.52},pressrad:"Väljarna faller av sig själva. Du måste hålla emot.",
-  bas:14.2,kassa:46,mal:"Tappa mindre än 1 procentenhet",prova:s=>s.total>=s.start-1},
+  press:{val:-1.13},pressrad:"Väljarna faller av sig själva. Du måste hålla emot.",
+  bas:14.2,kassa:46,mal:"Behålla väljarstödet",prova:s=>s.total>=s.start},
  {namn:"Vågmästaren",rad:"Litet. Avgör vem som styr.",svårt:1,
-  press:{med:-2.22,val:-1.86},pressrad:"Ett litet parti glöms bort mellan utspelen.",
+  press:{med:-2.22,val:-1.9},pressrad:"Ett litet parti glöms bort mellan utspelen.",
   bas:4.2,kassa:42,mal:"Klara spärren på 4 procent",prova:s=>s.total>=4},
  {namn:"Enfrågepartiet",rad:"En fråga. En lojal skara.",svårt:2,
-  press:{val:-1.98,med:-1.62},pressrad:"En fråga bär bara en bit på vägen.",
+  press:{val:-1.9,med:-1.57},pressrad:"En fråga bär bara en bit på vägen.",
   bas:5.2,kassa:42,mal:"Klara spärren med profilen kvar",prova:s=>s.total>=5},
  {namn:"Regeringspartiet",rad:"Sitter vid makten. Har ett facit att försvara.",svårt:2,
-  press:{val:-0.7,par:-0.47},pressrad:"Makten sliter, och allt du gör vägs mot facit.",
-  bas:27.5,kassa:50,mal:"Vara största parti",prova:s=>s.total>=28},
+  press:{val:-0.95,par:-0.61},pressrad:"Makten sliter, och allt du gör vägs mot facit.",
+  bas:27.7,kassa:50,mal:"Vara största parti",prova:s=>s.total>=28},
  {namn:"Utmanaren",rad:"Största oppositionsparti. Behöver inte leverera.",svårt:3,
-  press:{med:-0.37,blo:-0.41},pressrad:"Granskas som ett regeringsalternativ, behandlas som opposition.",
-  bas:24.5,kassa:46,mal:"Bli största parti",prova:s=>s.total>=25.5},
+  press:{med:-0.86,blo:-0.93},pressrad:"Granskas som ett regeringsalternativ, behandlas som opposition.",
+  bas:25,kassa:46,mal:"Bli största parti",prova:s=>s.total>=25.5},
  {namn:"Nykomlingen",rad:"Nystartat. Inget att förlora.",svårt:3,
-  press:{par:-0.56},pressrad:"Ingen organisation. Partiet håller ihop bara så länge det går bra.",
-  bas:3.8,kassa:46,mal:"Ta sig in i riksdagen",prova:s=>s.total>=4},
+  press:{par:-1.18},pressrad:"Ingen organisation. Partiet håller ihop bara så länge det går bra.",
+  bas:3.9,kassa:46,mal:"Ta sig in i riksdagen",prova:s=>s.total>=4},
 ];
 const SVÅRT=["","Lättare valrörelse","Jämn valrörelse","Tuff valrörelse"];
 
 /* v = vänster (svep vänster), h = höger */
 const DÄCK=[
- {e:"Vårändringsbudgeten",t:"Vårändringsbudgeten är valårets sista tillfälle att lägga pengar på bordet. Du får driva en post.",
-  v:{txt:"Välfärdens kärna",kost:2,eff:{blo:-2.9,par:1.1,val:0.7},f:"Posten prissattes till nio miljarder. Effekten skulle synas om tre till fem år."},
-  h:{txt:"Sänkt skatt på arbete",kost:2,eff:{blo:3.1,par:-1,val:-0.6},f:"Sänkningen skulle slå igenom i januari. Pensionärerna omfattas inte."}},
+ {e:"Vårändringsbudgeten",t:"Vårändringsbudgeten är valårets sista tillfälle att lägga pengar på bordet. Du får driva en post. Dina samarbetspartier har redan lovat skattesänkningen.",
+  v:{txt:"Välfärdens kärna",kost:2,eff:{blo:-2.94,par:1.06,val:0.58},f:"Posten prissattes till nio miljarder. Effekten skulle synas om tre till fem år."},
+  h:{txt:"Sänkt skatt på arbete",kost:2,eff:{blo:3.06,par:-1.04,val:-0.72},f:"Sänkningen skulle slå igenom i januari. Pensionärerna omfattas inte."}},
 
  {e:"Myndigheten",t:"En myndighet har överskridit sin budget med 1,2 miljarder. Du får frågan inom en timme.",
-  v:{txt:"Begär en utredning",kost:1,eff:{med:-3,blo:1.2,par:0.8},f:"En utredning skulle redovisas i november. Valet är i september."},
-  h:{txt:"Kräv avgång",kost:3,eff:{med:3.2,blo:-1.1,par:-0.9},f:"En anvisning till en myndighet vore ministerstyre och är förbjudet. Kravet upprepades ändå på torsdagen."}},
+  v:{txt:"Begär en utredning",kost:1,eff:{med:-3.05,blo:1.16,par:0.76},f:"En utredning skulle redovisas i november. Valet är i september."},
+  h:{txt:"Kräv avgång",kost:3,eff:{med:3.15,blo:-1.14,par:-0.94},f:"En anvisning till en myndighet vore ministerstyre och är förbjudet. Kravet upprepades ändå på torsdagen."}},
 
  {e:"Partiledardebatten",t:"Partiledardebatten är fyrtio minuter direktsänd, varav ungefär tjugo sekunder kommer att spridas.",
-  v:{txt:"Bemöt sakligt",kost:2,eff:{med:-2.8,par:1,val:1.2},f:"Sakligheten uppmärksammades i en ledarartikel. Klippet spreds inte."},
-  h:{txt:"Avbryt, håll hög ton",kost:1,eff:{med:3.4,par:-0.9,val:-1.1},f:"Klippet som spreds var när du suckade. Det såg sämre ut än det lät."}},
+  v:{txt:"Bemöt sakligt",kost:2,eff:{med:-2.85,par:0.96,val:1.08},f:"Sakligheten uppmärksammades i en ledarartikel. Klippet spreds inte."},
+  h:{txt:"Avbryt, håll hög ton",kost:1,eff:{med:3.35,par:-0.94,val:-1.22},f:"Klippet som spreds var när du suckade. Det såg sämre ut än det lät."}},
 
  {e:"Läckan",t:"Ett internt mejl har läckt. Innehållet är inte olagligt, bara pinsamt.",
-  v:{txt:"Bekräfta och beklaga",kost:1,eff:{par:-3.2,med:1.1,val:1},f:"Historien var död på fredagen."},
-  h:{txt:"Ifrågasätt äktheten",kost:5,eff:{par:2.9,med:-1,val:-1.2},f:"Äktheten bekräftades på onsdagen. Historien levde i nio dagar."}},
+  v:{txt:"Bekräfta och beklaga",kost:1,eff:{par:-3.24,med:-1.15,val:1.28},f:"Historien var död på fredagen."},
+  h:{txt:"Ifrågasätt äktheten",kost:5,eff:{par:2.86,med:0.95,val:-1.62},f:"Äktheten bekräftades på onsdagen. Historien levde i nio dagar."}},
 
  {e:"Valaffischen",t:"Valaffischen ska tryckas. Motivet sitter uppe ända till valdagen.",
-  v:{txt:"Ett löfte i stor text",kost:5,eff:{val:3.4,blo:-1.2,par:-0.7},f:"Löftet citerades i varje intervju därefter. Även efter valet."},
-  h:{txt:"Porträtt och partinamn",kost:4,eff:{val:-3,blo:1.1,par:0.8},f:"Igenkänningen ökade. Ingen kunde återge vad du vill."}},
+  v:{txt:"Ett löfte i stor text",kost:5,eff:{val:3.28,blo:-1.24,par:-0.74},f:"Löftet citerades i varje intervju därefter. Även efter valet."},
+  h:{txt:"Porträtt och partinamn",kost:4,eff:{val:-3.12,blo:1.06,par:0.76},f:"Igenkänningen ökade. Ingen kunde återge vad du vill."}},
 
  {e:"Underhållningsprogrammet",t:"Du är inbjuden till ett program där du ska baka. Politik får inte diskuteras.",
-  v:{txt:"Tacka nej",kost:1,eff:{val:-3.1,par:1.2,med:-0.6},f:"Platsen gick till en konkurrent. Avsnittet fick höga tittarsiffror."},
-  h:{txt:"Tacka ja",kost:2,eff:{val:3.3,par:-1.1,med:0.7},f:"Du var folklig i 43 minuter. Ledarsidorna kallade det ett lågvattenmärke."}},
+  v:{txt:"Tacka nej",kost:1,eff:{val:-3.22,par:1.16,med:-0.65},f:"Platsen gick till en konkurrent. Avsnittet fick höga tittarsiffror."},
+  h:{txt:"Tacka ja",kost:2,eff:{val:3.18,par:-1.14,med:0.65},f:"Du var folklig i 43 minuter. Ledarsidorna kallade det ett lågvattenmärke."}},
 
  {e:"Inlägget på X",t:"Ett klipp på dig sprids med vilseledande text. 40 000 visningar och stigande.",
-  v:{txt:"Låt det ligga",kost:1,eff:{med:-2.9,val:1,par:0.6},f:"Klippet nådde 300 000 visningar och slutade sedan spridas av sig självt."},
-  h:{txt:"Svara i tråden",kost:1,eff:{med:3,val:-0.9,par:-0.7},f:"Svaret fick fler visningar än klippet. Så gjorde även citaten av svaret."}},
+  v:{txt:"Låt det ligga",kost:1,eff:{med:-2.95,val:0.88,par:0.56},f:"Klippet nådde 300 000 visningar och slutade sedan spridas av sig självt."},
+  h:{txt:"Svara i tråden",kost:1,eff:{med:2.95,val:-1.02,par:-0.74},f:"Svaret fick fler visningar än klippet. Så gjorde även citaten av svaret."}},
 
  {e:"Interna kritiken",t:"Tre distriktsordförande har uttalat sig anonymt om ditt ledarskap.",
-  v:{txt:"Kalla till möte",kost:2,eff:{par:3.3,med:-1.2,blo:-0.6},f:"Mötet läckte. Innehållet i läckan var att mötet varit konstruktivt."},
-  h:{txt:"Markera offentligt",kost:1,eff:{par:-3.1,med:1.3,blo:0.7},f:"Två av tre stannade. Den tredje skrev en debattartikel."}},
+  v:{txt:"Kalla till möte",kost:2,eff:{par:3.26,med:-1.25},f:"Mötet läckte. Innehållet i läckan var att mötet varit konstruktivt."},
+  h:{txt:"Markera offentligt",kost:1,eff:{par:-3.14,med:1.25},f:"Två av tre stannade. Den tredje skrev en debattartikel."}},
 
  {e:"Donationen",t:"En intresseorganisation erbjuder tolv miljoner till valrörelsen.",
-  v:{txt:"Ta emot",kost:-12,eff:{med:-1.6,blo:0.9,par:1},f:"Bidraget redovisas enligt reglerna, längst ner på en sida ingen läser.",öppnar:1},
-  h:{txt:"Tacka nej",kost:1,eff:{med:1.5,blo:-0.8,par:-0.9},f:"Nejet nämndes i en notis. Pengarna gick till någon annan."}},
+  v:{txt:"Ta emot",kost:-12,eff:{med:-3.5,val:-2.4,par:1.39},f:"Bidraget redovisas enligt reglerna, längst ner på en sida ingen läser.",öppnar:1},
+  h:{txt:"Tacka nej",kost:1,eff:{med:3.3,val:2.1,par:-1.31},f:"Nejet nämndes i en notis. Pengarna gick till någon annan."}},
 
  {e:"Gentjänsten",dold:true,t:"Organisationen som finansierade dig vill se ett undantag i den nya regleringen.",
-  v:{txt:"Neka",kost:2,eff:{med:1.5,blo:-0.9,par:-1},f:"Finansieringen upphörde. Det gjorde även inbjudningarna."},
-  h:{txt:"Skriv in undantaget",kost:-6,eff:{med:-1.4,blo:1,par:1.1},f:"Undantaget är tekniskt och står i en bilaga. En reporter hittade det ändå."}},
+  v:{txt:"Neka",kost:2,eff:{med:3,val:2,par:-1.51},f:"Finansieringen upphörde. Det gjorde även inbjudningarna."},
+  h:{txt:"Skriv in undantaget",kost:-6,eff:{med:-2.9,val:-2.1,par:1.59},f:"Undantaget är tekniskt och står i en bilaga. En reporter hittade det ändå."}},
 
  {e:"Insamlingen",t:"Kassören föreslår ett insamlingsupprop till medlemmarna.",
-  v:{txt:"Gör utskicket",kost:-9,eff:{par:-2.6,blo:0.6},f:"Uppropet gav nio miljoner och 340 avanmälningar från utskickslistan."},
-  h:{txt:"Avstå",kost:1,eff:{par:2.4,blo:-0.5},f:"Kassören noterade beslutet i protokollet."}},
+  v:{txt:"Gör utskicket",kost:-9,eff:{par:-3.11,med:-0.9},f:"Uppropet gav nio miljoner och 340 avanmälningar från utskickslistan."},
+  h:{txt:"Avstå",kost:1,eff:{par:2.89,med:0.8},f:"Kassören noterade beslutet i protokollet."}},
 
  {e:"Partifastigheten",t:"Kongresslokalen är värd fjorton miljoner. Den används fyra dagar om året.",
-  v:{txt:"Behåll den",kost:1,eff:{par:2.5,med:-0.7},f:"Lokalen står kvar. Driftskostnaden gör det också."},
-  h:{txt:"Sälj den",kost:-14,eff:{par:-2.8,med:0.8},f:"Distrikten fick veta det via fastighetsannonsen."}},
+  v:{txt:"Behåll den",kost:1,eff:{par:2.89,med:-1.1},f:"Lokalen står kvar. Driftskostnaden gör det också."},
+  h:{txt:"Sälj den",kost:-14,eff:{par:-3.21,med:1.2},f:"Distrikten fick veta det via fastighetsannonsen."}},
 
  {e:"Kommunkrisen",t:"En kommun kan inte betala ut löner nästa månad.",
-  v:{txt:"Hänvisa till självstyret",kost:1,eff:{val:-3.2,blo:1.2,par:0.7},f:"Formellt korrekt. Lönerna betalades inte ut."},
-  h:{txt:"Kräv statligt stöd",kost:2,eff:{val:3.4,blo:-1.1,par:-0.8},f:"Fjorton kommuner hörde av sig med samma begäran inom en vecka."}},
+  v:{txt:"Hänvisa till självstyret",kost:1,eff:{val:-3.32,blo:1.16,par:0.66},f:"Formellt korrekt. Lönerna betalades inte ut."},
+  h:{txt:"Kräv statligt stöd",kost:2,eff:{val:3.28,blo:-1.14,par:-0.84},f:"Fjorton kommuner hörde av sig med samma begäran inom en vecka."}},
 
  {e:"Klimatstyrmedlet",t:"Ett styrmedel ger stor effekt om tio år och kostar hushållen pengar nu.",
-  v:{txt:"Ställ dig bakom det",kost:2,eff:{med:3,val:-1.2,blo:-0.9},f:"Effekten går inte att mäta inom mandatperioden. Kostnaden syns i mars."},
-  h:{txt:"Motsätt dig det",kost:1,eff:{med:-2.8,val:1.1,blo:1},f:"Motståndet motiverades med behov av ytterligare beredning."}},
+  v:{txt:"Ställ dig bakom det",kost:2,eff:{med:2.95,val:-1.32,blo:-0.94},f:"Effekten går inte att mäta inom mandatperioden. Kostnaden syns i mars."},
+  h:{txt:"Motsätt dig det",kost:1,eff:{med:-2.85,val:0.98,blo:0.96},f:"Motståndet motiverades med behov av ytterligare beredning."}},
 
  {e:"Brottsstatistiken",t:"Anmälningarna har ökat i tre kommuner. Uppklarningen är oförändrad.",
-  v:{txt:"Lova fler poliser",kost:3,eff:{val:3.3,med:-1.1,blo:0.6},f:"Polisutbildningen tar två och ett halvt år. Löftet gäller mandatperioden."},
-  h:{txt:"Peka på anmälningsbenägenheten",kost:1,eff:{val:-3.1,med:1.2,blo:-0.5},f:"Påpekandet var statistiskt korrekt och blev veckans mest hånade uttalande."}},
+  v:{txt:"Lova fler poliser",kost:3,eff:{val:3.18,med:-1.15},f:"Polisutbildningen tar två och ett halvt år. Löftet gäller mandatperioden."},
+  h:{txt:"Peka på anmälningsbenägenheten",kost:1,eff:{val:-3.22,med:1.15},f:"Påpekandet var statistiskt korrekt och blev veckans mest hånade uttalande."}},
 
  {e:"Utfrågningen",t:"En reporter frågar vad ditt förslag kostar. Du har siffran ungefär i huvudet.",
-  v:{txt:"Ange en siffra",kost:1,eff:{par:2.6,blo:-1,med:0.7},f:"Siffran var fel med 30 procent. Den citerades i sex månader."},
-  h:{txt:"Säg att du återkommer",kost:1,eff:{par:-2.4,blo:1.1,med:-0.8},f:"Klippet på när du inte svarade blev intervjuns mest spridda del."}},
+  v:{txt:"Ange en siffra",kost:1,eff:{par:2.56,blo:-1.04,med:0.65},f:"Siffran var fel med 30 procent. Den citerades i sex månader."},
+  h:{txt:"Säg att du återkommer",kost:1,eff:{par:-2.44,blo:1.06,med:-0.85},f:"Klippet på när du inte svarade blev intervjuns mest spridda del."}},
 
  {e:"Koalitionsfrågan",t:"Journalisterna vill veta vilka du kan tänka dig att samarbeta med.",
-  v:{txt:"Håll dörrarna öppna",kost:1,eff:{blo:-3.3,par:1.2,val:-0.7},f:"Frågan ställdes på nytt vid varje framträdande fram till valdagen."},
-  h:{txt:"Ge tydligt besked",kost:1,eff:{blo:3.5,par:-1.1,val:0.8},f:"Beskedet låste dig. Det noterades av alla du inte nämnde."}},
+  v:{txt:"Håll dörrarna öppna",kost:1,eff:{blo:-3.34,par:1.16,val:-0.82},f:"Frågan ställdes på nytt vid varje framträdande fram till valdagen."},
+  h:{txt:"Ge tydligt besked",kost:1,eff:{blo:3.46,par:-1.14,val:0.68},f:"Beskedet låste dig. Det noterades av alla du inte nämnde."}},
 
  {e:"Utspelet",t:"Din pressekreterare har ett färdigt utspel som garanterat får genomslag i tre dagar.",
-  v:{txt:"Kör det",kost:3,eff:{med:3.2,par:-1.2,val:0.6},f:"Genomslaget blev fyra dagar. Frågan fanns inte i något av dina underlag."},
-  h:{txt:"Lägg det i byrålådan",kost:1,eff:{med:-3,par:1.1,val:-0.5},f:"Ett annat parti gjorde samma utspel elva dagar senare."}},
+  v:{txt:"Kör det",kost:3,eff:{med:3.6,par:-1.6,val:0.8},f:"Genomslaget blev fyra dagar. Frågan fanns inte i något av dina underlag."},
+  h:{txt:"Lägg det i byrålådan",kost:1,eff:{med:-3.5,par:1.4,val:-0.9},f:"Ett annat parti gjorde samma utspel elva dagar senare."}},
 
  {e:"Turnén",t:"Tre veckor kvar. Det finns utrymme för en sista satsning.",
-  v:{txt:"Digital annonsering",kost:8,eff:{val:2.9,par:-1,med:0.6},f:"Räckvidden var 1,8 miljoner. Genomsnittlig visningstid 1,4 sekunder."},
-  h:{txt:"Torgmöten i mindre orter",kost:6,eff:{val:-1.6,par:2.2,med:-0.7},f:"Sammanlagt 2 100 personer kom. Lokaltidningarna skrev om samtliga besök."}},
+  v:{txt:"Digital annonsering",kost:8,eff:{val:2.78,par:-1.04,med:0.55},f:"Räckvidden var 1,8 miljoner. Genomsnittlig visningstid 1,4 sekunder."},
+  h:{txt:"Torgmöten i mindre orter",kost:6,eff:{val:-1.72,par:2.16,med:-0.75},f:"Sammanlagt 2 100 personer kom. Lokaltidningarna skrev om samtliga besök."}},
 
  {e:"Slutdebatten",sist:true,t:"Sista framträdandet före valdagen. De flesta har redan bestämt sig.",
-  v:{txt:"Upprepa budskapet",kost:1,eff:{val:-2.6,par:1.3,blo:0.9},f:"Ingenting nytt sades. Ingenting gick fel."},
-  h:{txt:"Ge ett nytt löfte",kost:4,eff:{val:3.5,par:-1.2,blo:-1},f:"Löftet var inte förankrat i budgeten. Det noterades på måndagen."}},
+  v:{txt:"Upprepa budskapet",kost:1,eff:{val:-2.72,par:1.26,blo:0.86},f:"Ingenting nytt sades. Ingenting gick fel."},
+  h:{txt:"Ge ett nytt löfte",kost:4,eff:{val:3.38,par:-1.24,blo:-1.04},f:"Löftet var inte förankrat i budgeten. Det noterades på måndagen."}},
 ];
 
 /* ============ TILLSTÅND ============ */
@@ -386,23 +387,11 @@ function totalt(slut){
   return slut?poäng(slutlean())*blockstöd(S.lean):poäng(S.lean);
 }
 
-/* Bedömningen ligger fast under hela valrörelsen — samma kort ger samma råd
-   hur länge man än drar — men blir en ny bedömning nästa gång man spelar. */
-function bedömningFel(kort,sida,id){
-  const t=S.frö+"|"+kort.e+"|"+sida+"|"+id;
-  let h=2166136261;
-  for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619);}
-  return (h>>>0)/4294967296 < BEDÖMNING_FEL;
-}
-
-// Vilka mätare ett val rör och åt vilket håll — aldrig hur mycket.
-// Riktningen är en bedömning som kan slå fel; storleken lär man sig
-// först efter flera valrörelser.
+// Vilka mätare som står på spel. Åt vilket håll de rör sig står inte här —
+// det ska framgå av kortets text, och det är hela beslutet.
 function berörda(kort,v,sida){
   return SEG.filter(s=>Math.abs(v.eff[s.id]||0)>=0.05)
-            .map(s=>{const sant=(v.eff[s.id]||0)>0;
-                     const fel=bedömningFel(kort,sida,s.id);
-                     return {seg:s,upp:fel?!sant:sant,sant,fel};});
+            .map(s=>({seg:s,upp:(v.eff[s.id]||0)>0}));
 }
 
 function blanda(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[x[i],x[j]]=[x[j],x[i]];}return x;}
@@ -478,8 +467,8 @@ function vyStart(){
     <p class="under">Ett år. Arton beslut. Svep åt det håll du väljer.</p>
     <div class="roller">${SEG.map(s=>
       `<div><b>${s.namn}</b><span>${s.roll}</span></div>`).join("")}
-      <div class="fotnot">Pilarna när du drar är din pressekreterares bedömning.
-      Ungefär var tionde är fel. Efteråt ser du vilka.</div></div>
+      <div class="fotnot">När du drar ser du vilka mätare som står på spel — aldrig åt
+      vilket håll. Det ska du läsa dig till ur kortet. Efteråt får du veta hur det gick.</div></div>
     <div id="lista"></div></div>`;
   const l=document.getElementById("lista");
   PARTIER.forEach(p=>{
@@ -559,8 +548,8 @@ function koppla(el,k){
     vSida.textContent = dx<0 ? "Vänster" : "Höger";
     vTxt.textContent  = v.txt;
     vKr.textContent   = prisTxt(v);
-    vBer.innerHTML    = ber.map(b=>
-      `<span class="${b.upp?'upp':'ned'}">${b.seg.namn} ${b.upp?'&#8593;':'&#8595;'}</span>`).join("");
+    vBer.innerHTML    = VISA_NAMN
+      ? ber.map(b=>`<span>${b.seg.namn}</span>`).join("") : "";
     efter.classList.add("göm");
     märk(ber);
     val.style.opacity = Math.min(1,(a-START)/(TRÖSKEL-START));
@@ -578,11 +567,9 @@ function koppla(el,k){
     märk([]);
     val.style.opacity=0; val.classList.remove("på","klar");   // bubblan släcks
     const kostade=kostnad(valt);
-    const bedömt=berörda(k,valt,riktning<0?"v":"h");
     verkställ(valt);
     S.historik.push({e:k.e,txt:valt.txt,sida:riktning<0?"Vänster":"Höger",
-      ut:S.sistaUtfall,kost:kostade,f:valt.f,
-      fel:bedömt.filter(b=>b.fel).map(b=>b.seg.namn)});
+      ut:S.sistaUtfall,kost:kostade,f:valt.f});
     S.följd={text:valt.f, ut:S.sistaUtfall, varning:S.varning, ny:true};
     släpp();                                   // kortets lyssnare behövs inte längre
     setTimeout(()=>{
@@ -638,9 +625,7 @@ function vySlut(){
   const facit=S.historik.map((h,i)=>{
     const d=SEG.map(s=>{const n=h.ut[s.id]||0;if(Math.abs(n)<0.05)return"";
       return `<i class="${n<0?'ned':'upp'}">${s.namn.slice(0,3)} ${n>0?'+':''}${n.toFixed(1)}</i>`;}).join("");
-    const fel=h.fel&&h.fel.length
-      ? `<u>Bedömningen slog fel om ${h.fel.join(" och ")}</u>` : "";
-    return `<li><b>${h.e}</b><em>${h.txt}</em><div class="rad">${d}</div>${fel}</li>`;
+    return `<li><b>${h.e}</b><em>${h.txt}</em><div class="rad">${d}</div></li>`;
   }).join("");
 
   yta.innerHTML=`<div class="panel"><div class="slutkort">
